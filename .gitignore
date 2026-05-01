@@ -1,0 +1,23 @@
+# Node
+node_modules/
+
+# Env
+.env
+.env.*
+
+# Build
+dist/
+build/
+
+# Logs
+*.log
+
+# Prisma / SQLite
+dev.db
+*.db
+
+# Docker
+docker-compose.override.yml
+
+# Sistema
+.DS_Store
