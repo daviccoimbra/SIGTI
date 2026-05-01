@@ -1,10 +1,10 @@
-# 🧪 SIGTI - Sistema de Gestão de Chamados de TI
+#  SIGTI - Sistema de Gestão de Chamados de TI
 
 Sistema desenvolvido para gerenciamento de chamados internos do setor de TI do Laboratório Martins Pinto.
 
 ---
 
-## 📌 Objetivo
+##  Objetivo
 
 Centralizar, organizar e acompanhar as demandas de TI, substituindo processos informais (como WhatsApp), permitindo:
 
@@ -15,7 +15,7 @@ Centralizar, organizar e acompanhar as demandas de TI, substituindo processos in
 
 ---
 
-## 🏗️ Estrutura do Projeto
+##  Estrutura do Projeto
 sigti/
 ├── backend/ # API Node.js + Prisma + PostgreSQL
 ├── frontend/ # Aplicação React
@@ -24,7 +24,7 @@ sigti/
 
 ---
 
-## 🚀 Tecnologias Utilizadas
+##  Tecnologias Utilizadas
 
 ### Frontend
 - React
@@ -44,7 +44,7 @@ sigti/
 
 ---
 
-## ⚙️ Como rodar o projeto
+##  Como rodar o projeto
 
 ### 🔹 1. Clonar o repositório
 - bash:
