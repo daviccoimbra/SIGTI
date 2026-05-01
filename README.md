@@ -48,24 +48,32 @@ sigti/
 
 ### 🔹 1. Clonar o repositório
 - bash:
+
 git clone -b dev https://github.com/DenixVieira/PI.git
+
 cd PI
 
 ### 2. Subir o banco com Docker
 
 docker compose up -d
 - Verificar se está rodando:
+
 docker ps
 
 ### 3. Rodar o Backend
 cd backend
+
 npm install
+
 npx prisma migrate dev
+
 npm run dev
 
 ### 4. Rodar o Frontend
 cd frontend
+
 npm install
+
 npm run dev
 
 ### Portas utilizadas
