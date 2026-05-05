@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { MdOutlineFileUpload, MdAddCircleOutline } from "react-icons/md";
-import api from "../../services/api";
+import { useApiTickets } from "../../services/hooks";
 import { useNavigate } from "react-router-dom";
 
 interface FormData {
@@ -28,7 +28,7 @@ const NewCall = () => {
   const onSubmit = async (data: FormData) => {
     setLoading(true);
     try {
-      const protocolo = Math.floor(1000000 + Math.random() * 9000000).toString();
+      const protocolo = new Date().toISOString().replace(/\D/g, "").slice(0, 17);;
       const payload = {
         titulo: data.titulo,
         descricao: data.descricao,
@@ -37,8 +37,7 @@ const NewCall = () => {
         solicitante: "Analista de TI",
         departamento: data.categoria || "TI",
       };
-      
-      await api.post('/tickets', payload);
+      await useApiTickets.newTicket(payload)
       alert('Chamado criado com sucesso!');
       reset();
       navigate('/boards');
@@ -79,27 +78,27 @@ const NewCall = () => {
   };
 
   return (
-    <div 
+    <div
       className="flex flex-col items-center justify-center bg-[#f8f9fa] pb-5">
-      <h1 
-      className="text-2xl mb-6 text-bold  mt-2 font-bold">Novo Chamado</h1>
-      <p 
+      <h1
+        className="text-2xl mb-6 text-bold  mt-2 font-bold">Novo Chamado</h1>
+      <p
         className="text-[13px] text-gray-600 mb-3">
         Preencha os dados abaixo para abrir um novo ticket
       </p>
-      <form 
+      <form
         className="flex justify-items-start w-[60%] md:w-[40%] bg-[#fff] p-4 shadow rounded-lg border-[2px] pb-5" onSubmit={handleSubmit(onSubmit)}>
 
-        <div 
+        <div
           className="flex flex-col w-full">
-          <div 
+          <div
             className="flex flex-col">
 
-            <label 
+            <label
               className="text-[15px] mb-3 font-bold">
               Título do Chamado*
             </label>
-            <input 
+            <input
               className="p-2 rounded-md border border-gray-300 text-[15px] focus:border-[#1e40af] focus:outline-none"
               placeholder="Informe o título do seu chamado"
               disabled={loading}
@@ -108,11 +107,11 @@ const NewCall = () => {
               })}
             >
             </input>
-            {errors.titulo && 
-            <span 
-              className="text-[13px] text-red-500">
-              Campo Obrigatório!
-            </span>}
+            {errors.titulo &&
+              <span
+                className="text-[13px] text-red-500">
+                Campo Obrigatório!
+              </span>}
           </div>
 
           <div className="flex flex-col">
@@ -129,34 +128,34 @@ const NewCall = () => {
                 })}
                 defaultValue=""
               >
-                <option 
-                  className="text-gray-500 text-[13px] " 
-                  value="" 
+                <option
+                  className="text-gray-500 text-[13px] "
+                  value=""
                   disabled>
                   Selecione uma categoria...
                 </option>
-                <option 
-                  className="text-gray-500 text-[13px] " 
+                <option
+                  className="text-gray-500 text-[13px] "
                   value="ti">
                   Suporte TI
                 </option>
-                <option 
-                  className="text-gray-500 text-[13px] " 
+                <option
+                  className="text-gray-500 text-[13px] "
                   value="financeiro">
                   Financeiro
                 </option>
-                <option 
-                  className="text-gray-500 text-[13px] " 
+                <option
+                  className="text-gray-500 text-[13px] "
                   value="manutencao">
                   Manutenção
                 </option>
-                <option 
-                  className="text-gray-500 text-[13px] " 
+                <option
+                  className="text-gray-500 text-[13px] "
                   value="rh">
                   Recursos Humanos
                 </option>
-                <option 
-                  className="text-gray-500 text-[13px] " 
+                <option
+                  className="text-gray-500 text-[13px] "
                   value="outros">
                   Outros
                 </option>

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react"
 import { MdClose, MdArchive, MdDelete } from "react-icons/md"
 import type { TaskT, CommentT } from "../../types"
-import api from "../../services/api"
+import { useApiTickets } from "../../services/hooks"
 
 type Tab = "detalhes" | "comentarios" | "historico"
 
@@ -49,7 +49,7 @@ const TaskModal = ({ isOpen, onClose, task, onUpdate }: Props) => {
         if (!confirm('Deseja realmente arquivar este chamado?')) return;
         setLoading(true);
         try {
-            await api.patch(`/tickets/${task.id}/archive`);
+            await useApiTickets.updateArchiveTicket(task.id);
             if (onUpdate) onUpdate();
             onClose();
         } catch (error) {
@@ -64,7 +64,7 @@ const TaskModal = ({ isOpen, onClose, task, onUpdate }: Props) => {
         if (!confirm('Deseja realmente excluir este chamado?')) return;
         setLoading(true);
         try {
-            await api.delete(`/tickets/${task.id}`);
+            await useApiTickets.deleteTicket(task.id);
             if (onUpdate) onUpdate();
             onClose();
         } catch (error) {

@@ -12,7 +12,7 @@ import { useState, useEffect, useCallback } from "react";
 import type { Columns, TaskT } from "../../types";
 import Card from "./Cards";
 import TaskModal from "../../components/TaksModal";
-import api from "../../services/api";
+import { useApiTickets } from "../../services/hooks";
 
 const Boards = () => {
   const [columns, setColumns] = useState<Columns>({
@@ -25,8 +25,7 @@ const Boards = () => {
 
   const fetchTickets = useCallback(async () => {
     try {
-      const response = await api.get('/tickets');
-      const tickets: TaskT[] = response.data;
+      const tickets: TaskT[] = await useApiTickets.getTickets();;
       
       const newColumns: Columns = {
         backlog: { name: "Para Fazer (Backlog)", items: [] },
@@ -114,10 +113,7 @@ const Boards = () => {
     });
 
     try {
-      await api.patch(`/tickets/${card.id}/status`, {
-        status: targetColumnId,
-        history: newHistoryItem
-      });
+      await useApiTickets.updateStatusTicket(card.id, targetColumnId, newHistoryItem)
     } catch (error) {
       console.error('Erro ao atualizar status:', error);
       fetchTickets(); // Revert on error

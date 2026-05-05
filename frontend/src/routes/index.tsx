@@ -7,7 +7,6 @@ import Dashboard from "../pages/dashboard";
 import { PrivateLayout } from "../layout/privateLayout";
 import Login from "../pages/login";
 import Archive from "../pages/archive";
-import Task from "../pages/task";
 
 const routes: RouteObject[] = [
   {
@@ -39,10 +38,6 @@ const routes: RouteObject[] = [
           {
             path: "arquivados",
             element: <Archive />,
-          },
-          {
-            path: "chamados/:id/tarefa",
-            element: <Task/>,
           },
         ],
       },

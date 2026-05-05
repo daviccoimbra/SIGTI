@@ -1,8 +1,8 @@
 import { useEffect, useState, useCallback, useMemo } from 'react';
-import api from '../../services/api';
 import type { TaskT } from '../../types';
 import TaskModal from '../../components/TaksModal';
 import { MdSearch } from 'react-icons/md';
+import { useApiTickets } from '../../services/hooks';
 
 const Archive = () => {
   const [archivedTickets, setArchivedTickets] = useState<TaskT[]>([]);
@@ -11,8 +11,8 @@ const Archive = () => {
 
   const fetchArchived = useCallback(async () => {
     try {
-      const response = await api.get('/tickets?archived=true');
-      setArchivedTickets(response.data);
+      const tickets = await useApiTickets.getTicketsArchived();
+      setArchivedTickets(tickets);
     } catch (error) {
       console.error('Erro ao buscar arquivados:', error);
     }
@@ -27,7 +27,7 @@ const Archive = () => {
   }, [fetchArchived]);
 
   const filteredTickets = useMemo(() => {
-    return archivedTickets.filter(ticket => 
+    return archivedTickets.filter(ticket =>
       ticket.titulo.toLowerCase().includes(searchTerm.toLowerCase()) ||
       ticket.protocolo.toLowerCase().includes(searchTerm.toLowerCase()) ||
       ticket.solicitante.toLowerCase().includes(searchTerm.toLowerCase())
@@ -37,7 +37,7 @@ const Archive = () => {
   return (
     <div className="w-full px-5 py-8">
       <h1 className="text-2xl font-bold mb-6">Chamados Arquivados</h1>
-      
+
       <div className="relative mb-6 max-w-md">
         <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400">
           <MdSearch size={20} />
@@ -74,15 +74,14 @@ const Archive = () => {
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{ticket.titulo}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{ticket.solicitante}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    <span className={`px-2 py-1 text-xs rounded-full text-white font-bold ${
-                      ticket.prioridade === 'Alta' ? 'bg-red-500' : 
-                      ticket.prioridade === 'Media' ? 'bg-yellow-500' : 'bg-green-500'
-                    }`}>
+                    <span className={`px-2 py-1 text-xs rounded-full text-white font-bold ${ticket.prioridade === 'Alta' ? 'bg-red-500' :
+                        ticket.prioridade === 'Media' ? 'bg-yellow-500' : 'bg-green-500'
+                      }`}>
                       {ticket.prioridade}
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    <button 
+                    <button
                       onClick={() => setSelectedTask(ticket)}
                       className="text-blue-600 hover:text-blue-900 font-medium"
                     >

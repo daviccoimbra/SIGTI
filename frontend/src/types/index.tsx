@@ -12,7 +12,8 @@ export type HistoryItem = {
   date: string
 }
 
-export type TaskT = {
+// type ticket
+export type TaskT = { 
   id: string
   createdAt: string
   protocolo: string
