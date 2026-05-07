@@ -4,7 +4,7 @@ import prisma from '../lib/prisma.js';
 export const createTicket = async (req: Request, res: Response) => {
   try {
     const { protocolo, solicitante, departamento, titulo, descricao, prioridade } = req.body;
-    
+
     // Check if protocol already exists
     const existing = await prisma.ticket.findUnique({
       where: { protocolo }
@@ -54,7 +54,7 @@ export const updateTicketStatus = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const { status, history } = req.body;
-    
+
     // Using transaction to ensure atomicity
     const result = await prisma.$transaction(async (tx) => {
       const ticket = await tx.ticket.update({
@@ -84,19 +84,47 @@ export const updateTicketStatus = async (req: Request, res: Response) => {
   }
 };
 
-export const archiveTicket = async (req: Request, res: Response) => {
+export const archiveTicket = async (
+  req: Request,
+  res: Response
+) => {
   try {
-    const { id } = req.params;
-    const ticket = await prisma.ticket.update({
-      where: { id: id as string },
-      data: { isArchived: true },
-    });
-    res.json(ticket);
-  } catch (error) {
-    res.status(500).json({ error: 'Erro ao arquivar chamado' });
-  }
-};
+    const { id } = req.params
+    const { history } = req.body;
 
+    const currentTicket = await prisma.ticket.findUnique({
+      where: {
+        id: String(id),
+      },
+    })
+
+    if (!currentTicket) {
+      return res.status(404).json({
+        error: "Chamado não encontrado",
+      })
+    }
+
+    const ticket = await prisma.ticket.update({
+      where: {
+        id: String(id),
+      },
+      data: {
+        isArchived: !currentTicket.isArchived,
+        history: {
+          create: history,
+        },
+      },
+    })
+
+    return res.status(200).json(ticket)
+  } catch (error) {
+    console.log(error)
+
+    return res.status(500).json({
+      error: "Erro ao arquivar chamado",
+    })
+  }
+}
 export const deleteTicket = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
@@ -108,3 +136,51 @@ export const deleteTicket = async (req: Request, res: Response) => {
     res.status(500).json({ error: 'Erro ao deletar chamado' });
   }
 };
+
+export const addComment = async (
+  req: Request,
+  res: Response
+) => {
+  try {
+    const { id } = req.params
+    const comment = req.body
+
+    const ticket = await prisma.ticket.findUnique({
+      where: {
+        id: String(id),
+      },
+    })
+
+    if (!ticket) {
+      return res.status(404).json({
+        error: "Chamado não encontrado",
+      })
+    }
+
+    if (ticket.isArchived) {
+      return res.status(400).json({
+        error:
+          "Não é possível comentar em um chamado arquivado",
+      })
+    }
+
+    const updatedTicket = await prisma.ticket.update({
+      where: {
+        id: String(id),
+      },
+      data: {
+        comments: {
+          create: comment,
+        },
+      },
+    })
+
+    return res.status(200).json(updatedTicket)
+  } catch (error) {
+    console.log(error)
+
+    return res.status(500).json({
+      error: "Erro ao adicionar comentário",
+    })
+  }
+}

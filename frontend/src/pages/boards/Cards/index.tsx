@@ -1,8 +1,6 @@
 import { useDraggable } from "@dnd-kit/core"
 import {
   MdOutlineAccessTime,
-  MdOutlineCancel,
-  MdOutlineArchive,
   MdOutlineFileOpen
 } from "react-icons/md"
 
@@ -20,6 +18,16 @@ const Card = ({ columnId, task, onOpen }: TaskProps) => {
     data: { columnId },
   })
 
+
+
+  const formatData = (new Date(task.createdAt)).toLocaleString("pt-BR", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  })
+
   const style = {
     transform: transform
       ? `translate3d(${transform.x}px, ${transform.y}px, 0)`
@@ -30,8 +38,8 @@ const Card = ({ columnId, task, onOpen }: TaskProps) => {
     task.prioridade === "Alta"
       ? "bg-[#ff6900]"
       : task.prioridade === "Media"
-      ? "bg-[#f0b100]"
-      : "bg-[#00c950]"
+        ? "bg-[#f0b100]"
+        : "bg-[#00c950]"
 
   return (
     <div
@@ -54,7 +62,7 @@ const Card = ({ columnId, task, onOpen }: TaskProps) => {
         >
           {/* Título + prioridade */}
           <div className="w-full flex justify-between items-start min-w-0 gap-2">
-            <span className="text-[15.5px] text-[#1e40af] truncate min-w-0 font-medium">
+            <span className="text-[15.5px] text-[#1e40af] font-bold truncate min-w-0">
               {task.titulo}
             </span>
 
@@ -78,8 +86,8 @@ const Card = ({ columnId, task, onOpen }: TaskProps) => {
         <div className="w-full flex items-center justify-between gap-2 min-w-0">
           <div className="flex items-center gap-1 shrink-0">
             <MdOutlineAccessTime color="#666" size={18} />
-            <span className="text-[13px] text-gray-700">
-              mins
+            <span className="text-xs text-gray-700">
+            {formatData}
             </span>
           </div>
 
@@ -91,20 +99,6 @@ const Card = ({ columnId, task, onOpen }: TaskProps) => {
               title="Acessar chamado"
             >
               <MdOutlineFileOpen className="text-black group-hover:text-white" />
-            </button>
-
-            <button
-              className="p-1 group hover:bg-blue-600/70 rounded-lg transition"
-              title="Arquivar"
-            >
-              <MdOutlineArchive className="text-black group-hover:text-white" />
-            </button>
-
-            <button
-              className="p-1 group hover:bg-red-600/70 rounded-lg transition"
-              title="Excluir"
-            >
-              <MdOutlineCancel className="text-black group-hover:text-white" />
             </button>
           </div>
         </div>

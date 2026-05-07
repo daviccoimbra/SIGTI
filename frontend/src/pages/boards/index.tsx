@@ -1,206 +1,345 @@
 import {
   DndContext,
-  useDroppable,
   PointerSensor,
   TouchSensor,
+  useDroppable,
   useSensor,
   useSensors,
-  type DragEndEvent
-} from "@dnd-kit/core";
+  type DragEndEvent,
+} from "@dnd-kit/core"
 
-import { useState, useEffect, useCallback } from "react";
-import type { Columns, TaskT } from "../../types";
-import Card from "./Cards";
-import TaskModal from "../../components/TaksModal";
-import { useApiTickets } from "../../services/hooks";
+import {
+  useEffect,
+  useMemo,
+  useState,
+} from "react"
+
+import Card from "./Cards"
+import TaskModal from "../../components/TaksModal"
+
+import type {
+  Columns,
+  TaskT,
+} from "../../types"
+
+import { useTickets } from "../../hooks/useTickets"
+
+import { useTicketMutations } from "../../hooks/useTicketMutations"
+
+const INITIAL_COLUMNS: Columns = {
+  backlog: {
+    name: "Para Fazer (Backlog)",
+    items: [],
+  },
+
+  pending: {
+    name: "Em Andamento",
+    items: [],
+  },
+
+  todo: {
+    name: "Aguardando Cliente",
+    items: [],
+  },
+}
 
 const Boards = () => {
-  const [columns, setColumns] = useState<Columns>({
-    backlog: { name: "Para Fazer (Backlog)", items: [] },
-    pending: { name: "Em Andamento", items: [] },
-    todo: { name: "Aguardando Cliente", items: [] },
-  });
-  const [selectedTask, setSelectedTask] = useState<TaskT | null>(null);
   const CURRENT_USER = "Denix"
 
-  const fetchTickets = useCallback(async () => {
-    try {
-      const tickets: TaskT[] = await useApiTickets.getTickets();;
-      
-      const newColumns: Columns = {
-        backlog: { name: "Para Fazer (Backlog)", items: [] },
-        pending: { name: "Em Andamento", items: [] },
-        todo: { name: "Aguardando Cliente", items: [] },
-      };
+  const [selectedTask, setSelectedTask] =
+    useState<TaskT | null>(null)
 
-    tickets.forEach(ticket => {
-      const status = ticket.status as keyof Columns;
-      if (newColumns[status]) {
-        newColumns[status].items.push(ticket);
-      }
-    });
+  const [columns, setColumns] =
+    useState<Columns>(INITIAL_COLUMNS)
 
-      setColumns(newColumns);
-    } catch (error) {
-      console.error('Erro ao buscar chamados:', error);
-    }
-  }, []);
-  
+  const {
+    data: tickets = [],
+    isLoading,
+  } = useTickets(false)
+
+  const { updateStatus } =
+    useTicketMutations()
+
+  // sincroniza tickets -> columns
   useEffect(() => {
-    let isMounted = true;
-    if (isMounted) {
-      fetchTickets();
-    }
-    return () => { isMounted = false; };
-  }, [fetchTickets]);
+    const newColumns: Columns = {
+      backlog: {
+        name: "Para Fazer (Backlog)",
+        items: [],
+      },
 
-  // Sensores
+      pending: {
+        name: "Em Andamento",
+        items: [],
+      },
+
+      todo: {
+        name: "Aguardando Cliente",
+        items: [],
+      },
+    }
+
+    tickets.forEach((ticket) => {
+      const status =
+        ticket.status as keyof Columns
+
+      if (newColumns[status]) {
+        newColumns[status].items.push(
+          ticket
+        )
+      }
+    })
+
+    setColumns(newColumns)
+  }, [tickets])
+
+  // mantém modal sincronizado
+  const selectedTaskUpdated =
+    useMemo(() => {
+      if (!selectedTask) return null
+
+      const allTasks = Object.values(
+        columns
+      ).flatMap(
+        (column) => column.items
+      )
+
+      return (
+        allTasks.find(
+          (ticket) =>
+            ticket.id ===
+            selectedTask.id
+        ) || null
+      )
+    }, [columns, selectedTask])
+
+  // sensores drag
   const sensors = useSensors(
     useSensor(PointerSensor),
+
     useSensor(TouchSensor, {
       activationConstraint: {
         delay: 200,
         tolerance: 5,
       },
     })
-  );
+  )
 
-  const handleViewTask = (task: TaskT) => {
-    setSelectedTask(task);
-  };
+  const handleViewTask = (
+    task: TaskT
+  ) => {
+    setSelectedTask(task)
+  }
 
-  const handleDragEnd = async (event: DragEndEvent) => {
-    const { active, over } = event;
-    if (!over) return;
+  const handleDragEnd = (
+    event: DragEndEvent
+  ) => {
+    const { active, over } = event
 
-    const sourceColumnId = (active.data.current as { columnId: string })?.columnId;
-    const targetColumnId = over.id as string;
+    if (!over) return
 
-    if (!sourceColumnId || !targetColumnId) return;
-    if (sourceColumnId === targetColumnId) return;
+    const sourceColumnId = (
+      active.data.current as {
+        columnId: keyof Columns
+      }
+    )?.columnId
 
-    const card = columns[sourceColumnId].items.find(
-      (item: TaskT) => item.id === active.id
-    );
-    if (!card) return;
+    const targetColumnId =
+      over.id as keyof Columns
+
+    if (
+      !sourceColumnId ||
+      !targetColumnId
+    ) {
+      return
+    }
+
+    if (
+      sourceColumnId ===
+      targetColumnId
+    ) {
+      return
+    }
+
+    const card =
+      columns[
+        sourceColumnId
+      ].items.find(
+        (item) =>
+          item.id === active.id
+      )
+
+    if (!card) return
 
     const newHistoryItem = {
-      from: columns[sourceColumnId].name,
-      to: columns[targetColumnId].name,
+      from: columns[sourceColumnId]
+        .name,
+
+      to: columns[targetColumnId]
+        .name,
+
       user: CURRENT_USER,
+
       date: new Date().toISOString(),
     }
 
-    // Optimistic update
+    // optimistic update
     setColumns((prev) => {
-      const sourceItems = prev[sourceColumnId].items.filter(
-        (item: TaskT) => item.id !== active.id
-      );
+      const sourceItems =
+        prev[
+          sourceColumnId
+        ].items.filter(
+          (item) =>
+            item.id !== active.id
+        )
 
       const updatedCard = {
         ...card,
-        status: targetColumnId,
-        history: [...(card.history || []), newHistoryItem],
-      };
 
-      const targetItems = [...prev[targetColumnId].items, updatedCard];
+        status: targetColumnId,
+
+        history: [
+          ...(card.history || []),
+          newHistoryItem,
+        ],
+      }
+
+      const targetItems = [
+        ...prev[targetColumnId]
+          .items,
+        updatedCard,
+      ]
 
       return {
         ...prev,
-        [sourceColumnId]: { ...prev[sourceColumnId], items: sourceItems },
-        [targetColumnId]: { ...prev[targetColumnId], items: targetItems },
-      };
-    });
 
-    try {
-      await useApiTickets.updateStatusTicket(card.id, targetColumnId, newHistoryItem)
-    } catch (error) {
-      console.error('Erro ao atualizar status:', error);
-      fetchTickets(); // Revert on error
-    }
+        [sourceColumnId]: {
+          ...prev[
+            sourceColumnId
+          ],
 
-    // 🔥 se o modal estiver aberto, atualiza também
-    setSelectedTask((prev: TaskT | null) =>
-      prev?.id === card.id
-        ? {
-          ...prev,
-          status: targetColumnId,
-          history: [...(prev.history || []), newHistoryItem],
-        }
-        : prev
-    );
-  };
+          items: sourceItems,
+        },
 
+        [targetColumnId]: {
+          ...prev[
+            targetColumnId
+          ],
+
+          items: targetItems,
+        },
+      }
+    })
+
+    // backend
+    updateStatus.mutate({
+      cardId: card.id,
+
+      targetColumnId,
+
+      history: newHistoryItem,
+    })
+  }
+
+  if (isLoading) {
+    return (
+      <div className="p-5">
+        Carregando chamados...
+      </div>
+    )
+  }
 
   return (
-    <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
+    <DndContext
+      sensors={sensors}
+      onDragEnd={handleDragEnd}
+    >
       <div className="w-full px-5">
-
-        <h1 className="text-2xl mb-6 mt-[20px] font-bold">
+        <h1 className="mt-5 mb-6 text-2xl font-bold">
           Kanban chamados
         </h1>
 
-        <span className="text-[13px] text-gray-600 mb-3 block">
-          Arraste os cards para alterar o status dos chamados
+        <span className="mb-3 block text-[13px] text-gray-600">
+          Arraste os cards para alterar
+          o status dos chamados
         </span>
 
-        <div className="flex flex-col md:flex-row items-start gap-5 pb-8">
-          {Object.entries(columns).map(([columnId, column]) => (
-            <Column
-              key={columnId}
-              id={columnId}
-              column={column}
-              onOpen={handleViewTask} // 🔥 passando corretamente
-            />
-          ))}
+        <div className="flex flex-col items-start gap-5 pb-8 md:flex-row">
+          {Object.entries(columns).map(
+            ([columnId, column]) => (
+              <Column
+                key={columnId}
+                id={columnId}
+                column={column}
+                onOpen={
+                  handleViewTask
+                }
+              />
+            )
+          )}
         </div>
       </div>
 
-      {/* Modal */}
       <TaskModal
-        isOpen={!!selectedTask}
-        task={selectedTask}
-        onClose={() => setSelectedTask(null)}
-        onUpdate={fetchTickets}
+        isOpen={
+          !!selectedTaskUpdated
+        }
+        task={selectedTaskUpdated}
+        onClose={() =>
+          setSelectedTask(null)
+        }
       />
     </DndContext>
-  );
-};
-
-export default Boards;
-
-interface ColumnProps {
-    id: string;
-    column: { name: string; items: TaskT[] };
-    onOpen: (task: TaskT) => void;
+  )
 }
 
-const Column = ({ id, column, onOpen }: ColumnProps) => {
-  const { setNodeRef } = useDroppable({ id });
+export default Boards
+
+interface ColumnProps {
+  id: string
+
+  column: {
+    name: string
+    items: TaskT[]
+  }
+
+  onOpen: (task: TaskT) => void
+}
+
+const Column = ({
+  id,
+  column,
+  onOpen,
+}: ColumnProps) => {
+  const { setNodeRef } =
+    useDroppable({
+      id,
+    })
 
   return (
     <div
       ref={setNodeRef}
-      className="flex flex-col flex-1 min-w-[250px] mt-4"
+      className="mt-4 flex min-w-[250px] flex-1 flex-col"
     >
-      <h1 className="py-[10px] w-full text-[20px] mb-2 font-semibold">
+      <h1 className="mb-2 w-full py-[10px] text-[20px] font-semibold">
         {column.name}
       </h1>
 
-      <span className="text-[13px] text-gray-400 mb-3">
-        {column.items.length} chamados
+      <span className="mb-3 text-[13px] text-gray-400">
+        {column.items.length}{" "}
+        chamados
       </span>
 
-      <div className="p-3 rounded-lg border-2 border-gray-300">
-        {column.items.map((task: TaskT) => (
+      <div className="rounded-lg border-2 border-gray-300 p-3 min-h-[200px]">
+        {column.items.map((task) => (
           <Card
             key={task.id}
             columnId={id}
             task={task}
-            onOpen={onOpen} // 🔥 corrigido aqui
+            onOpen={onOpen}
           />
         ))}
       </div>
     </div>
-  );
-};
+  )
+}

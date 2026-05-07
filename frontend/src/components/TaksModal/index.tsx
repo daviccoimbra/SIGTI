@@ -1,232 +1,468 @@
-import { useEffect, useState } from "react"
-import { MdClose, MdArchive, MdDelete } from "react-icons/md"
-import type { TaskT, CommentT } from "../../types"
-import { useApiTickets } from "../../services/hooks"
+import { useEffect, useMemo, useState } from "react"
 
-type Tab = "detalhes" | "comentarios" | "historico"
+import {
+    MdArchive,
+    MdClose,
+    MdDelete,
+    MdUnarchive,
+} from "react-icons/md"
 
+import type { CommentT, TaskT } from "../../types"
+
+import { useToast } from "../../context/toastContext"
+import { useTicketMutations } from "../../hooks/useTicketMutations"
+
+type Tab =
+    | "detalhes"
+    | "comentarios"
+    | "historico"
 
 interface Props {
     isOpen: boolean
     onClose: () => void
     task: TaskT | null
-    onUpdate?: () => void
 }
 
-const TaskModal = ({ isOpen, onClose, task, onUpdate }: Props) => {
-    const CURRENT_USER = "Denix" // depois vem do auth
-    const [tab, setTab] = useState<Tab>("detalhes")
-    const [comments, setComments] = useState<CommentT[]>([])
-    const [newComment, setNewComment] = useState("")
-    const [loading, setLoading] = useState(false)
+const tabs: Tab[] = [
+    "detalhes",
+    "comentarios",
+    "historico",
+]
 
-    useEffect(() => {
-        if (task) {
-            setComments(task.comments || [])
-        }
-    }, [task])
+const TaskModal = ({
+    isOpen,
+    onClose,
+    task,
+}: Props) => {
+    const CURRENT_USER = "Denix"
+
+    const { showMessage } = useToast()
+
+    const {
+        addComment,
+        archiveTicket,
+        deleteTicket,
+    } = useTicketMutations()
+
+    const [tab, setTab] =
+        useState<Tab>("detalhes")
+
+    const [newComment, setNewComment] =
+        useState("")
 
     // ESC + scroll lock
     useEffect(() => {
-        const esc = (e: KeyboardEvent) => {
-            if (e.key === "Escape") onClose()
+        const handleEsc = (
+            e: KeyboardEvent
+        ) => {
+            if (e.key === "Escape") {
+                onClose()
+            }
         }
 
         if (isOpen) {
-            document.addEventListener("keydown", esc)
-            document.body.style.overflow = "hidden"
+            document.body.style.overflow =
+                "hidden"
+
+            document.addEventListener(
+                "keydown",
+                handleEsc
+            )
         }
 
         return () => {
-            document.removeEventListener("keydown", esc)
-            document.body.style.overflow = "auto"
+            document.body.style.overflow =
+                "auto"
+
+            document.removeEventListener(
+                "keydown",
+                handleEsc
+            )
         }
-    }, [isOpen])
+    }, [isOpen, onClose])
+
+    const priorityClass = useMemo(() => {
+        switch (task?.prioridade) {
+            case "Alta":
+                return "bg-[#ff6900]"
+
+            case "Media":
+                return "bg-[#f0b100]"
+
+            default:
+                return "bg-[#00c950]"
+        }
+    }, [task?.prioridade])
 
     if (!isOpen || !task) return null
 
     const handleArchive = async () => {
-        if (!confirm('Deseja realmente arquivar este chamado?')) return;
-        setLoading(true);
+        const confirmMessage =
+            task.isArchived
+                ? "Deseja realmente desarquivar este chamado?"
+                : "Deseja realmente arquivar este chamado?"
+
+        if (!confirm(confirmMessage)) {
+            return
+        }
+
         try {
-            await useApiTickets.updateArchiveTicket(task.id);
-            if (onUpdate) onUpdate();
-            onClose();
+            const historyItem = {
+                from: task.isArchived
+                    ? "Arquivados"
+                    : "Desarquivados",
+
+                to: task.isArchived
+                    ? "Desaquivados"
+                    : "Arquivados",
+
+                user: CURRENT_USER,
+
+                date: new Date().toISOString(),
+            }
+
+            await archiveTicket.mutateAsync({
+                id: task.id,
+                history: historyItem,
+            })
+            showMessage("Chamado arquivado com sucesso!", "success")
+            onClose()
         } catch (error) {
-            console.error('Erro ao arquivar:', error);
-            alert('Erro ao arquivar chamado');
-        } finally {
-            setLoading(false);
+            console.error(error)
+
+            showMessage(
+                "Erro ao arquivar chamado",
+                "error"
+            )
         }
     }
 
     const handleDelete = async () => {
-        if (!confirm('Deseja realmente excluir este chamado?')) return;
-        setLoading(true);
+        if (
+            !confirm(
+                "Deseja realmente excluir este chamado?"
+            )
+        ) {
+            return
+        }
+
         try {
-            await useApiTickets.deleteTicket(task.id);
-            if (onUpdate) onUpdate();
-            onClose();
+            await deleteTicket.mutateAsync(
+                task.id
+            )
+            showMessage("Ticket deletado com sucesso!", "success")
+            onClose()
         } catch (error) {
-            console.error('Erro ao excluir:', error);
-            alert('Erro ao excluir chamado');
-        } finally {
-            setLoading(false);
+            console.error(error)
+
+            showMessage(
+                "Erro ao excluir chamado",
+                "error"
+            )
         }
     }
 
-    const addComment = () => {
+    const handleAddComment = async () => {
         if (!newComment.trim()) return
 
-        const newItem: CommentT = {
-            id: crypto.randomUUID(),
-            user: CURRENT_USER,
-            message: newComment,
-            date: new Date().toISOString(),
-        }
+        try {
+            const comment: CommentT = {
+                id: crypto.randomUUID(),
 
-        setComments((prev) => [newItem, ...prev])
-        setNewComment("")
+                user: CURRENT_USER,
+
+                message: newComment,
+
+                date: new Date().toISOString(),
+            }
+
+            await addComment.mutateAsync({
+                ticketId: task.id,
+                comment,
+            })
+            showMessage("Comentário adicionado com sucesso!", "success")
+            setNewComment("")
+        } catch (error) {
+            console.error(error)
+
+            showMessage(
+                "Erro ao adicionar comentário",
+                "error"
+            )
+        }
     }
 
     return (
         <div
             onClick={onClose}
-            className="fixed inset-0 bg-black/50 flex justify-center items-center z-50"
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
         >
             <div
-                onClick={(e) => e.stopPropagation()}
-                className="bg-white w-full max-w-3xl rounded-xl p-6"
+                onClick={(e) =>
+                    e.stopPropagation()
+                }
+                className="w-full max-w-3xl rounded-xl bg-white p-6 shadow-lg"
             >
-                {/* header */}
-                <div className="flex justify-between items-center mb-4">
+                {/* HEADER */}
+                <div className="mb-4 flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                        <h1 className="text-xl font-bold text-gray-500">
-                            {task.titulo} #{task.protocolo}
+                        <h1 className="text-xl font-bold text-gray-700">
+                            {task.titulo} #
+                            {task.protocolo}
                         </h1>
-                        <h2 className={`px-2 py-[2px] text-[12px] rounded-3xl text-white font-bold whitespace-nowrap ${task.prioridade === "Alta"
-                            ? "bg-[#ff6900]"
-                            : task.prioridade === "Media"
-                                ? "bg-[#f0b100]"
-                                : "bg-[#00c950]"}`}>
-                            {task.prioridade}
-                        </h2>
-                    </div>
-                    <div className="flex items-center gap-3">
-                        <button 
-                            disabled={loading}
-                            onClick={handleArchive}
-                            title="Arquivar"
-                            className="text-gray-400 hover:text-blue-600 disabled:opacity-50"
+
+                        <span
+                            className={`rounded-full px-2 py-[2px] text-xs font-bold text-white ${priorityClass}`}
                         >
-                            <MdArchive size={22} />
+                            {task.prioridade}
+                        </span>
+                    </div>
+
+                    <div className="flex items-center gap-3">
+                        <button
+                            disabled={
+                                archiveTicket.isPending
+                            }
+                            onClick={
+                                handleArchive
+                            }
+                            title={
+                                task.isArchived
+                                    ? "Desarquivar"
+                                    : "Arquivar"
+                            }
+                            className="text-gray-400 transition hover:text-blue-600 disabled:opacity-50"
+                        >
+                            {task.isArchived ? (
+                                <MdUnarchive
+                                    size={22}
+                                />
+                            ) : (
+                                <MdArchive
+                                    size={22}
+                                />
+                            )}
                         </button>
-                        <button 
-                            disabled={loading}
-                            onClick={handleDelete}
+
+                        <button
+                            disabled={
+                                deleteTicket.isPending
+                            }
+                            onClick={
+                                handleDelete
+                            }
                             title="Excluir"
-                            className="text-gray-400 hover:text-red-600 disabled:opacity-50"
+                            className="text-gray-400 transition hover:text-red-600 disabled:opacity-50"
                         >
                             <MdDelete size={22} />
                         </button>
-                        <button onClick={onClose} >
-                            <MdClose size={22} className="hover:bg-red-400 hover:text-white hover:rounded-lg" />
+
+                        <button
+                            onClick={onClose}
+                        >
+                            <MdClose
+                                size={22}
+                                className="rounded-lg transition hover:bg-red-400 hover:text-white"
+                            />
                         </button>
                     </div>
                 </div>
 
-                {/* abas */}
-                <div className="flex gap-4 border-b mb-4">
-                    {["detalhes", "comentarios", "historico"].map((t) => (
+                {/* TABS */}
+                <div className="mb-4 flex gap-4 border-b">
+                    {tabs.map((item) => (
                         <button
-                            key={t}
-                            onClick={() => setTab(t as Tab)}
-                            className={`pb-2 capitalize
-                ${tab === t
+                            key={item}
+                            onClick={() =>
+                                setTab(item)
+                            }
+                            className={`pb-2 capitalize transition
+                            ${
+                                tab === item
                                     ? "border-b-2 border-blue-600 font-bold"
                                     : "text-gray-500"
-                                }`}
+                            }`}
                         >
-                            {t}
+                            {item}
                         </button>
                     ))}
                 </div>
 
-                {/* conteúdo */}
+                {/* DETALHES */}
                 {tab === "detalhes" && (
-                    <div>
-                        <p><b>Solicitante:</b> {task.solicitante}</p>
-                        <p><b>Departamento:</b> {task.departamento}</p>
-                        <p className="mt-3">{task.descricao}</p>
+                    <div className="space-y-2">
+                        <p>
+                            <b>
+                                Solicitante:
+                            </b>{" "}
+                            {
+                                task.solicitante
+                            }
+                        </p>
+
+                        <p>
+                            <b>
+                                Departamento:
+                            </b>{" "}
+                            {
+                                task.departamento
+                            }
+                        </p>
+
+                        <p className="pt-2 text-gray-700">
+                            {
+                                task.descricao
+                            }
+                        </p>
                     </div>
                 )}
 
+                {/* COMENTÁRIOS */}
                 {tab === "comentarios" && (
                     <div>
-                        <textarea
-                            value={newComment}
-                            onChange={(e) => setNewComment(e.target.value)}
-                            className="w-full border p-2 rounded"
-                            placeholder="Escreva um comentário..."
-                        />
+                        {!task.isArchived && (
+                            <>
+                                <textarea
+                                    value={
+                                        newComment
+                                    }
+                                    onChange={(
+                                        e
+                                    ) =>
+                                        setNewComment(
+                                            e.target
+                                                .value
+                                        )
+                                    }
+                                    placeholder="Escreva um comentário..."
+                                    className="w-full rounded border p-2 outline-none focus:border-blue-500"
+                                />
 
-                        <button
-                            onClick={addComment}
-                            className="mt-2 bg-blue-600 text-white px-3 py-1 rounded"
-                        >
-                            Comentar
-                        </button>
+                                <button
+                                    disabled={
+                                        addComment.isPending
+                                    }
+                                    onClick={
+                                        handleAddComment
+                                    }
+                                    className="mt-2 rounded bg-blue-600 px-3 py-1 text-white transition hover:bg-blue-700 disabled:opacity-50"
+                                >
+                                    {addComment.isPending
+                                        ? "Comentando..."
+                                        : "Comentar"}
+                                </button>
+                            </>
+                        )}
 
-                        <div className="mt-4 space-y-2">
-                            {comments.map((c) => (
-                                <div key={c.id} className="p-3 border rounded bg-gray-50">
-                                    <div className="flex justify-between text-xs text-gray-400 mb-1">
-                                        <span className="font-bold text-gray-600">{c.user}</span>
-                                        <span>{new Date(c.date).toLocaleString()}</span>
-                                    </div>
-
-                                    <p className="text-sm text-gray-700">
-                                        {c.message}
-                                    </p>
+                        <div className="mt-4 max-h-[300px] space-y-3 overflow-y-auto pr-2">
+                            {!task.comments ||
+                            task.comments
+                                .length ===
+                                0 ? (
+                                <div className="text-sm text-gray-500">
+                                    Nenhum comentário
+                                    ainda...
                                 </div>
-                            ))}
+                            ) : (
+                                task.comments
+                                    .slice()
+                                    .reverse()
+                                    .map(
+                                        (
+                                            comment
+                                        ) => (
+                                            <div
+                                                key={
+                                                    comment.id
+                                                }
+                                                className="rounded border bg-gray-50 p-3"
+                                            >
+                                                <div className="mb-1 flex justify-between text-xs text-gray-400">
+                                                    <span className="font-bold text-gray-600">
+                                                        {
+                                                            comment.user
+                                                        }
+                                                    </span>
+
+                                                    <span>
+                                                        {new Date(
+                                                            comment.date
+                                                        ).toLocaleString()}
+                                                    </span>
+                                                </div>
+
+                                                <p className="text-sm text-gray-700">
+                                                    {
+                                                        comment.message
+                                                    }
+                                                </p>
+                                            </div>
+                                        )
+                                    )
+                            )}
                         </div>
                     </div>
                 )}
 
+                {/* HISTÓRICO */}
                 {tab === "historico" && (
-                    <div className="space-y-3 max-h-[300px] overflow-auto">
-                        {!task.history || task.history.length === 0 ? (
+                    <div className="max-h-[300px] space-y-3 overflow-auto">
+                        {!task.history ||
+                        task.history
+                            .length === 0 ? (
                             <div className="text-gray-500">
-                                Nenhum histórico ainda...
+                                Nenhum histórico
+                                ainda...
                             </div>
                         ) : (
                             task.history
                                 .slice()
                                 .reverse()
-                                .map((h, i) => (
-                                    <div
-                                        key={i}
-                                        className="p-3 border rounded bg-gray-50 text-sm"
-                                    >
-                                        <p className="text-gray-700">
-                                            <span className="font-bold">{h.user}</span>{" "}
-                                            moveu de{" "}
-                                            <span className="font-bold">{h.from}</span>{" "}
-                                            para{" "}
-                                            <span className="font-bold">{h.to}</span>
-                                        </p>
+                                .map(
+                                    (
+                                        history,
+                                        index
+                                    ) => (
+                                        <div
+                                            key={
+                                                index
+                                            }
+                                            className="rounded border bg-gray-50 p-3 text-sm"
+                                        >
+                                            <p className="text-gray-700">
+                                                <span className="font-bold">
+                                                    {
+                                                        history.user
+                                                    }
+                                                </span>{" "}
+                                                moveu
+                                                de{" "}
+                                                <span className="font-bold">
+                                                    {
+                                                        history.from
+                                                    }
+                                                </span>{" "}
+                                                para{" "}
+                                                <span className="font-bold">
+                                                    {
+                                                        history.to
+                                                    }
+                                                </span>
+                                            </p>
 
-                                        <span className="text-gray-400 text-xs">
-                                            {new Date(h.date).toLocaleString()}
-                                        </span>
-                                    </div>
-                                ))
+                                            <span className="text-xs text-gray-400">
+                                                {new Date(
+                                                    history.date
+                                                ).toLocaleString()}
+                                            </span>
+                                        </div>
+                                    )
+                                )
                         )}
                     </div>
                 )}
             </div>
-        </div >
+        </div>
     )
 }
 
