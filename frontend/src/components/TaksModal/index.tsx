@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react"
-
+import { v4 as uuidv4 } from "uuid"
 import {
     MdArchive,
     MdClose,
@@ -167,7 +167,7 @@ const TaskModal = ({
 
         try {
             const comment: CommentT = {
-                id: crypto.randomUUID(),
+                id: uuidv4(),
 
                 user: CURRENT_USER,
 
@@ -195,7 +195,7 @@ const TaskModal = ({
     return (
         <div
             onClick={onClose}
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+            className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/50 p-4"
         >
             <div
                 onClick={(e) =>
@@ -277,11 +277,10 @@ const TaskModal = ({
                                 setTab(item)
                             }
                             className={`pb-2 capitalize transition
-                            ${
-                                tab === item
+                            ${tab === item
                                     ? "border-b-2 border-blue-600 font-bold"
                                     : "text-gray-500"
-                            }`}
+                                }`}
                         >
                             {item}
                         </button>
@@ -339,6 +338,7 @@ const TaskModal = ({
                                 />
 
                                 <button
+                                    type="button"
                                     disabled={
                                         addComment.isPending
                                     }
@@ -356,8 +356,8 @@ const TaskModal = ({
 
                         <div className="mt-4 max-h-[300px] space-y-3 overflow-y-auto pr-2">
                             {!task.comments ||
-                            task.comments
-                                .length ===
+                                task.comments
+                                    .length ===
                                 0 ? (
                                 <div className="text-sm text-gray-500">
                                     Nenhum comentário
@@ -408,8 +408,8 @@ const TaskModal = ({
                 {tab === "historico" && (
                     <div className="max-h-[300px] space-y-3 overflow-auto">
                         {!task.history ||
-                        task.history
-                            .length === 0 ? (
+                            task.history
+                                .length === 0 ? (
                             <div className="text-gray-500">
                                 Nenhum histórico
                                 ainda...

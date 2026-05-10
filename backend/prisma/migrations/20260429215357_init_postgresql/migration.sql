@@ -16,6 +16,23 @@ CREATE TABLE "Ticket" (
 );
 
 -- CreateTable
+CREATE TABLE "Attachment" (
+    "id" TEXT NOT NULL,
+
+    "filename" TEXT NOT NULL,
+    "filepath" TEXT NOT NULL,
+    "mimetype" TEXT NOT NULL,
+    "size" INTEGER NOT NULL,
+
+    "ticketId" TEXT NOT NULL,
+
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "Attachment_pkey" PRIMARY KEY ("id")
+);
+
+
+-- CreateTable
 CREATE TABLE "Comment" (
     "id" TEXT NOT NULL,
     "user" TEXT NOT NULL,
@@ -46,3 +63,12 @@ ALTER TABLE "Comment" ADD CONSTRAINT "Comment_ticketId_fkey" FOREIGN KEY ("ticke
 
 -- AddForeignKey
 ALTER TABLE "History" ADD CONSTRAINT "History_ticketId_fkey" FOREIGN KEY ("ticketId") REFERENCES "Ticket"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+
+-- AddForeignKey
+ALTER TABLE "Attachment"
+ADD CONSTRAINT "Attachment_ticketId_fkey"
+FOREIGN KEY ("ticketId")
+REFERENCES "Ticket"("id")
+ON DELETE CASCADE
+ON UPDATE CASCADE;

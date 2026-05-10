@@ -5,14 +5,71 @@ services:
     image: postgres:15
     container_name: sigti_postgres
     restart: always
-    environment:
-      POSTGRES_USER: sigti
-      POSTGRES_PASSWORD: sigti123
-      POSTGRES_DB: sigti_db
-    ports:
-      - "5432:5432"
+    env_file:
+      - .env
+    expose:
+      - "5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
+    networks:
+      - sigti_network
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+
+    container_name: sigti_backend
+
+    restart: unless-stopped
+
+    depends_on:
+      - postgres
+
+    env_file:
+      - .env
+
+    expose:
+      - "3001"
+
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+      - ./backend/archive:/app/archive
+
+    command: sh -c "npx prisma migrate deploy && npm run dev"
+
+    networks:
+      - sigti_network
+
+  frontend:
+    build:
+      context: ./frontEnd
+      dockerfile: Dockerfile
+
+    container_name: sigti_frontend
+
+    restart: unless-stopped
+
+    depends_on:
+      - backend
+
+    ports:
+      - "5173:5173"
+
+    volumes:
+      - ./frontEnd:/app
+      - /app/node_modules
+
+    command: npm run dev
+
+    networks:
+      - sigti_network
+
+
 volumes:
   postgres_data:
+
+networks:
+  sigti_network:
+    driver: bridge
