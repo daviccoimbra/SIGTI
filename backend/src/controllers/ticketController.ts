@@ -3,8 +3,19 @@ import prisma from '../lib/prisma.js';
 
 export const createTicket = async (req: Request, res: Response) => {
   try {
-    const { protocolo, solicitante, departamento, titulo, descricao, prioridade } = req.body;
-
+    const { 
+      protocolo, 
+      solicitante, 
+      requesterId, 
+      departamento, 
+      categoryId,
+      equipmentId,
+      titulo, 
+      descricao, 
+      classificacao,
+      prioridade 
+    } = req.body;
+    
     // Check if protocol already exists
     const existing = await prisma.ticket.findUnique({
       where: { protocolo }
@@ -18,9 +29,13 @@ export const createTicket = async (req: Request, res: Response) => {
       data: {
         protocolo,
         solicitante,
+        requesterId,
         departamento,
+        categoryId,
+        equipmentId,
         titulo,
         descricao,
+        classificacao,
         prioridade,
         status: 'backlog',
       },
@@ -42,6 +57,9 @@ export const getTickets = async (req: Request, res: Response) => {
       include: {
         comments: true,
         history: true,
+        category: true,
+        equipment: true,
+        requester: true,
       },
     });
     res.json(tickets);

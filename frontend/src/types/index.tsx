@@ -18,14 +18,45 @@ export type TaskT = {
   createdAt: string
   protocolo: string
   solicitante: string
+  requesterId?: string
+  requester?: RequesterT
   departamento: string
+  categoryId?: string
+  category?: CategoryT
+  equipmentId?: string
+  equipment?: EquipmentT
   titulo: string
   descricao: string
+  classificacao?: string
   prioridade: string
   status: string
   isArchived: boolean
   comments?: CommentT[]
   history?: HistoryItem[]
+}
+
+export type RequesterT = {
+  id: string
+  nome: string
+  cargo: string
+  unidade: string
+  setor: string
+  createdAt: string
+}
+
+export type CategoryT = {
+  id: string
+  descricao: string
+  createdAt: string
+}
+
+export type EquipmentT = {
+  id: string
+  nome: string
+  marcaModelo: string
+  unidade: string
+  setor: string
+  createdAt: string
 }
 
 type Column = {

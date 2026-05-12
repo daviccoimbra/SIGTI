@@ -8,19 +8,53 @@ datasource db {
 }
 
 model Ticket {
-  id           String    @id @default(uuid())
-  protocolo    String    @unique
-  solicitante  String
-  departamento String
-  titulo       String
-  descricao    String
-  prioridade   String
-  status       String    @default("backlog")
-  isArchived   Boolean   @default(false)
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
-  comments     Comment[]
-  history      History[]
+  id            String     @id @default(uuid())
+  protocolo     String     @unique
+  solicitante   String
+  requesterId   String?
+  requester     Requester? @relation(fields: [requesterId], references: [id])
+  departamento  String
+  categoryId    String?
+  category      Category?  @relation(fields: [categoryId], references: [id])
+  equipmentId   String?
+  equipment     Equipment? @relation(fields: [equipmentId], references: [id])
+  titulo        String
+  descricao     String
+  classificacao String?
+  prioridade    String
+  status        String     @default("backlog")
+  isArchived    Boolean    @default(false)
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+  comments      Comment[]
+  history       History[]
+}
+
+model Category {
+  id        String   @id @default(uuid())
+  descricao String
+  tickets   Ticket[]
+  createdAt DateTime @default(now())
+}
+
+model Equipment {
+  id          String   @id @default(uuid())
+  nome        String
+  marcaModelo String
+  unidade     String
+  setor       String
+  tickets     Ticket[]
+  createdAt   DateTime @default(now())
+}
+
+model Requester {
+  id        String   @id @default(uuid())
+  nome      String
+  cargo     String
+  unidade   String
+  setor     String
+  createdAt DateTime @default(now())
+  tickets   Ticket[]
 }
 
 model Comment {

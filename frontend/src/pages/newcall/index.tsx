@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useForm } from "react-hook-form";
 import {
   MdOutlineFileUpload,
@@ -10,13 +10,20 @@ import { useNavigate } from "react-router-dom";
 import { useToast } from "../../context/toastContext";
 
 import { useTicketMutations } from "../../hooks/useTicketMutations";
+import RequesterModal from "../../components/RequesterModal";
+import CategoryModal from "../../components/CategoryModal";
+import EquipmentModal from "../../components/EquipmentModal";
+import api from "../../services/api";
+import type { RequesterT, CategoryT, EquipmentT } from "../../types";
 
 interface FormData {
   titulo: string;
   descricao: string;
+  classificacao: string;
   prioridade: string;
-  categoria: string;
-  equipamento: string;
+  categoryId: string;
+  equipmentId: string;
+  requesterId: string;
 }
 
 const NewCall = () => {
@@ -26,12 +33,53 @@ const NewCall = () => {
   const [file, setFile] =
     useState<File | null>(null);
 
+  const [isRequesterModalOpen, setIsRequesterModalOpen] = useState(false);
+  const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
+  const [isEquipmentModalOpen, setIsEquipmentModalOpen] = useState(false);
+
+  const [requesters, setRequesters] = useState<RequesterT[]>([]);
+  const [categories, setCategories] = useState<CategoryT[]>([]);
+  const [equipments, setEquipments] = useState<EquipmentT[]>([]);
+
   const navigate = useNavigate();
 
   const { showMessage } = useToast();
 
   const { createTicket } =
     useTicketMutations();
+
+  const fetchRequesters = useCallback(async () => {
+    try {
+      const response = await api.get("/requesters");
+      setRequesters(response.data);
+    } catch (error) {
+      console.error("Erro ao buscar solicitantes:", error);
+    }
+  }, []);
+
+  const fetchCategories = useCallback(async () => {
+    try {
+      const response = await api.get("/categories");
+      setCategories(response.data);
+    } catch (error) {
+      console.error("Erro ao buscar categorias:", error);
+    }
+  }, []);
+
+  const fetchEquipments = useCallback(async () => {
+    try {
+      const response = await api.get("/equipments");
+      setEquipments(response.data);
+    } catch (error) {
+      console.error("Erro ao buscar equipamentos:", error);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchRequesters();
+    fetchCategories();
+    fetchEquipments();
+  }, [fetchRequesters, fetchCategories, fetchEquipments]);
 
   const {
     register,
@@ -49,15 +97,19 @@ const NewCall = () => {
         .replace(/\D/g, "")
         .slice(0, 17);
 
+      const selectedRequester = requesters.find(r => r.id === data.requesterId);
+
       const payload = {
         titulo: data.titulo,
         descricao: data.descricao,
+        classificacao: data.classificacao,
         prioridade: data.prioridade,
         protocolo,
-        solicitante:
-          "Analista de TI",
-        departamento:
-          data.categoria || "TI",
+        requesterId: data.requesterId,
+        categoryId: data.categoryId,
+        equipmentId: data.equipmentId,
+        solicitante: selectedRequester ? selectedRequester.nome : "Analista de TI",
+        departamento: selectedRequester ? selectedRequester.setor : "TI",
       };
 
       await createTicket.mutateAsync(
@@ -186,6 +238,51 @@ const NewCall = () => {
 
           <div className="flex flex-col">
             <label className="text-[15px] mt-5 mb-3 font-bold">
+              Solicitante*
+            </label>
+
+            <div className="flex items-center justify-center justify-between">
+              <select
+                className="p-2 text-[13px] rounded-md w-[95%] border-lg border border-gray-300 text-gray-700 focus:border-[#1e40af] focus:outline-none"
+                {...register(
+                  "requesterId",
+                  {
+                    required: true,
+                  }
+                )}
+                defaultValue=""
+              >
+                <option
+                  className="text-gray-500 text-[13px]"
+                  value=""
+                  disabled
+                >
+                  Selecione um solicitante...
+                </option>
+                {requesters.map((r) => (
+                  <option key={r.id} value={r.id}>
+                    {r.nome} - {r.setor} ({r.unidade})
+                  </option>
+                ))}
+              </select>
+
+              <button
+                type="button"
+                onClick={() => setIsRequesterModalOpen(true)}
+              >
+                <MdAddCircleOutline className="text-[25px] text-blue-700 cursor-pointer hover:text-blue-200" />
+              </button>
+            </div>
+
+            {errors.requesterId && (
+              <span className="text-[13px] text-red-500">
+                Campo Obrigatório!
+              </span>
+            )}
+          </div>
+
+          <div className="flex flex-col">
+            <label className="text-[15px] mt-5 mb-3 font-bold">
               Categoria do
               Chamado*
             </label>
@@ -194,7 +291,7 @@ const NewCall = () => {
               <select
                 className="p-2 text-[13px] rounded-md w-[95%] border-lg border border-gray-300 text-gray-700 focus:border-[#1e40af] focus:outline-none"
                 {...register(
-                  "categoria",
+                  "categoryId",
                   {
                     required: true,
                   }
@@ -209,33 +306,22 @@ const NewCall = () => {
                   Selecione uma
                   categoria...
                 </option>
-
-                <option value="ti">
-                  Suporte TI
-                </option>
-
-                <option value="financeiro">
-                  Financeiro
-                </option>
-
-                <option value="manutencao">
-                  Manutenção
-                </option>
-
-                <option value="rh">
-                  Recursos
-                  Humanos
-                </option>
-
-                <option value="outros">
-                  Outros
-                </option>
+                {categories.map((cat) => (
+                  <option key={cat.id} value={cat.id}>
+                    {cat.descricao}
+                  </option>
+                ))}
               </select>
 
-              <MdAddCircleOutline className="text-[25px] text-blue-700 cursor-pointer hover:text-blue-200" />
+              <button
+                type="button"
+                onClick={() => setIsCategoryModalOpen(true)}
+              >
+                <MdAddCircleOutline className="text-[25px] text-blue-700 cursor-pointer hover:text-blue-200" />
+              </button>
             </div>
 
-            {errors.categoria && (
+            {errors.categoryId && (
               <span className="text-[13px] text-red-500">
                 Campo
                 Obrigatório!
@@ -252,7 +338,7 @@ const NewCall = () => {
               <select
                 className="p-2 text-[13px] rounded-md w-[95%] border-lg border border-gray-300 text-gray-700 focus:border-[#1e40af] focus:outline-none"
                 {...register(
-                  "equipamento",
+                  "equipmentId",
                   {
                     required: true,
                   }
@@ -267,33 +353,22 @@ const NewCall = () => {
                   Selecione um
                   equipamento...
                 </option>
-
-                <option value="ti">
-                  Suporte TI
-                </option>
-
-                <option value="financeiro">
-                  Financeiro
-                </option>
-
-                <option value="manutencao">
-                  Manutenção
-                </option>
-
-                <option value="rh">
-                  Recursos
-                  Humanos
-                </option>
-
-                <option value="outros">
-                  Outros
-                </option>
+                {equipments.map((eq) => (
+                  <option key={eq.id} value={eq.id}>
+                    {eq.nome} - {eq.marcaModelo} ({eq.setor})
+                  </option>
+                ))}
               </select>
 
-              <MdAddCircleOutline className="text-[25px] text-blue-700 cursor-pointer hover:text-blue-200" />
+              <button
+                type="button"
+                onClick={() => setIsEquipmentModalOpen(true)}
+              >
+                <MdAddCircleOutline className="text-[25px] text-blue-700 cursor-pointer hover:text-blue-200" />
+              </button>
             </div>
 
-            {errors.equipamento && (
+            {errors.equipmentId && (
               <span className="text-[13px] text-red-500">
                 Campo
                 Obrigatório!
@@ -324,6 +399,32 @@ const NewCall = () => {
               <span className="text-[13px] text-red-500">
                 Campo
                 Obrigatório!
+              </span>
+            )}
+          </div>
+
+          <div className="flex flex-col">
+            <label className="text-[15px] mt-5 mb-3 font-bold">
+              Classificação*
+            </label>
+
+            <input
+              list="classificacoes"
+              className="p-2 rounded-md border border-gray-300 text-[15px] focus:border-[#1e40af] focus:outline-none"
+              placeholder="Selecione ou digite a classificação"
+              {...register("classificacao", { required: true })}
+            />
+            <datalist id="classificacoes">
+              <option value="Erro" />
+              <option value="Dúvida" />
+              <option value="Solicitação" />
+              <option value="Configuração" />
+              <option value="Outros" />
+            </datalist>
+
+            {errors.classificacao && (
+              <span className="text-[13px] text-red-500">
+                Campo Obrigatório!
               </span>
             )}
           </div>
@@ -495,6 +596,24 @@ const NewCall = () => {
           </div>
         </div>
       </form>
+
+      <RequesterModal
+        isOpen={isRequesterModalOpen}
+        onClose={() => setIsRequesterModalOpen(false)}
+        onSuccess={fetchRequesters}
+      />
+
+      <CategoryModal
+        isOpen={isCategoryModalOpen}
+        onClose={() => setIsCategoryModalOpen(false)}
+        onSuccess={fetchCategories}
+      />
+
+      <EquipmentModal
+        isOpen={isEquipmentModalOpen}
+        onClose={() => setIsEquipmentModalOpen(false)}
+        onSuccess={fetchEquipments}
+      />
     </div>
   );
 };

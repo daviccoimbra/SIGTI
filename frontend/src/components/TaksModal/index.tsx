@@ -290,29 +290,63 @@ const TaskModal = ({
                 {/* DETALHES */}
                 {tab === "detalhes" && (
                     <div className="space-y-2">
-                        <p>
-                            <b>
-                                Solicitante:
-                            </b>{" "}
-                            {
-                                task.solicitante
-                            }
-                        </p>
+                        <div className="grid grid-cols-2 gap-4">
+                            <p>
+                                <b>
+                                    Solicitante:
+                                </b>{" "}
+                                {
+                                    task.solicitante
+                                }
+                            </p>
+
+                            <p>
+                                <b>
+                                    Departamento:
+                                </b>{" "}
+                                {
+                                    task.departamento
+                                }
+                            </p>
+
+                            <p>
+                                <b>
+                                    Categoria:
+                                </b>{" "}
+                                {
+                                    task.category?.descricao || "Não informada"
+                                }
+                            </p>
+
+                            <p>
+                                <b>
+                                    Classificação:
+                                </b>{" "}
+                                {
+                                    task.classificacao || "Não informada"
+                                }
+                            </p>
+                        </div>
 
                         <p>
                             <b>
-                                Departamento:
+                                Equipamento:
                             </b>{" "}
                             {
-                                task.departamento
+                                task.equipment 
+                                    ? `${task.equipment.nome} (${task.equipment.marcaModelo})`
+                                    : "Nenhum equipamento vinculado"
                             }
                         </p>
 
-                        <p className="pt-2 text-gray-700">
-                            {
-                                task.descricao
-                            }
-                        </p>
+                        <div className="mt-4 border-t pt-4">
+                            <h3 className="mb-2 font-bold text-gray-700">Descrição do Problema:</h3>
+                            <p className="text-gray-700">
+                                {
+                                    task.descricao
+                                }
+                            </p>
+                        </div>
                     </div>
                 )}
 

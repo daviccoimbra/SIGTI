@@ -44,7 +44,7 @@ services:
 
   frontend:
     build:
-      context: ./frontEnd
+      context: ./frontend
       dockerfile: Dockerfile
 
     container_name: sigti_frontend
@@ -58,7 +58,7 @@ services:
       - "5173:5173"
 
     volumes:
-      - ./frontEnd:/app
+      - ./frontend:/app
       - /app/node_modules
 
     command: npm run dev
