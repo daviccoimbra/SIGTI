@@ -7,6 +7,8 @@ import Dashboard from "../pages/dashboard";
 import { PrivateLayout } from "../layout/privateLayout";
 import Login from "../pages/login";
 import Archive from "../pages/archive";
+import RegisterUser from "../pages/register";
+import { SectorGuard } from "../components/SectorGuard";
 
 const routes: RouteObject[] = [
   {
@@ -37,7 +39,19 @@ const routes: RouteObject[] = [
           },
           {
             path: "arquivados",
-            element: <Archive />,
+            element: (
+              <SectorGuard allowed={["ADMIN"]}>
+                <Archive />
+              </SectorGuard>
+            ),
+          },
+          {
+            path: "cadastro-usuario",
+            element: (
+              <SectorGuard allowed={["ADMIN"]}>
+                <RegisterUser />
+              </SectorGuard>
+            ),
           },
         ],
       },

@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   postgres:
     image: postgres:15
@@ -37,7 +35,7 @@ services:
       - /app/node_modules
       - ./backend/archive:/app/archive
 
-    command: sh -c "npx prisma migrate deploy && npm run dev"
+    command: sh -c "npx prisma migrate deploy && npx prisma db seed && npm run dev"
 
     networks:
       - sigti_network

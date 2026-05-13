@@ -1,14 +1,50 @@
-import { MdOutlineViewKanban, MdOutlineDashboard, MdOutlineArchive } from "react-icons/md";
+import { MdOutlineViewKanban, MdOutlineDashboard, MdOutlineArchive, MdLogout } from "react-icons/md";
 import { IoMdAddCircleOutline } from "react-icons/io";
-import { Link } from "react-router-dom";
+import { FaUserPlus } from "react-icons/fa";
+import { Link, useNavigate } from "react-router-dom";
+import { useAuth } from "../../context/authContext";
+import type { Setor } from "../../services/auth";
+
+type NavLink = {
+  title: string;
+  icon: React.ReactNode;
+  to: string;
+  /** Se definido, o link só aparece para estes setores */
+  allowedSetores?: Setor[];
+};
 
 const Sidebar = () => {
-  const navLinks = [
+  const { user, hasPermission, logout } = useAuth();
+  const navigate = useNavigate();
+
+  const navLinks: NavLink[] = [
     { title: "Novo\nChamado", icon: <IoMdAddCircleOutline/>, to: "/novochamado" },
     { title: "Painel", icon: <MdOutlineDashboard />, to: "/dashboard" },
     { title: "Kanban", icon: <MdOutlineViewKanban />, to: "/chamados" },
-    { title: "Arquivados", icon: <MdOutlineArchive />, to: "/arquivados" },
+    {
+      title: "Arquivados",
+      icon: <MdOutlineArchive />,
+      to: "/arquivados",
+      allowedSetores: ["ADMIN"],
+    },
+    {
+      title: "Cadastrar\nUsuário",
+      icon: <FaUserPlus />,
+      to: "/cadastro-usuario",
+      allowedSetores: ["ADMIN"],
+    },
   ];
+
+  // Filtra links conforme o setor do usuário
+  const visibleLinks = navLinks.filter((link) => {
+    if (!link.allowedSetores) return true;
+    return hasPermission(...link.allowedSetores);
+  });
+
+  const handleLogout = () => {
+    logout();
+    navigate("/login");
+  };
 
   return (
     <div 
@@ -19,10 +55,9 @@ const Sidebar = () => {
         className="h-[70px] flex items-center justify-center border-b p-3">
           
         <div 
-          className="flex bg-[#2563eb] w-full h-full rounded-lg items-center justify-center">
+          className="flex w-full h-full rounded-lg items-center justify-center overflow-hidden">
 
-            <span 
-              className="text-sm font-semibold text-[20px] text-[#fff]">JK</span>
+          <img src="/logoimage.png" alt="Logo" className="w-full h-full object-contain p-1" />
               
         </div>
         
@@ -30,8 +65,8 @@ const Sidebar = () => {
 
       {/* Menu */}
       <div 
-        className="flex flex-col items-center gap-4 py-5">
-        {navLinks.map((link) => (
+        className="flex flex-col items-center gap-4 py-5 flex-1">
+        {visibleLinks.map((link) => (
 
           <Link 
             to={link.to} 
@@ -55,6 +90,33 @@ const Sidebar = () => {
 
           </Link>
         ))}
+      </div>
+
+      {/* Rodapé: Info do usuário + Logout */}
+      <div className="flex flex-col items-center gap-2 py-4 border-t border-blue-800">
+        {/* Setor badge */}
+        {user && (
+          <div className="flex flex-col items-center gap-1">
+            <span className="text-[9px] font-bold text-blue-300 bg-blue-900/50 px-2 py-0.5 rounded-full">
+              {user.setor}
+            </span>
+            <span className="text-[9px] text-blue-300/70 text-center leading-tight truncate max-w-[70px]">
+              {user.nome}
+            </span>
+          </div>
+        )}
+
+        {/* Botão Logout */}
+        <button
+          onClick={handleLogout}
+          className="flex flex-col items-center justify-center gap-1 w-full py-2 hover:bg-red-600/30 cursor-pointer transition-all duration-200 rounded-lg m-1 text-[#b3bcD5] hover:text-red-300"
+          title="Sair"
+        >
+          <span className="text-xl">
+            <MdLogout />
+          </span>
+          <span className="text-[10px] font-medium">Sair</span>
+        </button>
       </div>
     </div>
   );
