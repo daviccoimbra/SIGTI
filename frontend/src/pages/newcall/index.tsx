@@ -137,6 +137,7 @@ const NewCall = () => {
     handleSubmit,
     reset,
     watch,
+    setValue,
     formState: { errors },
   } = useForm<FormData>();
 
@@ -276,7 +277,7 @@ const NewCall = () => {
                         onClick={() => {
                           setRequesterSearch(`${r.nome} - ${r.setor}`);
                           setShowRequesterDropdown(false);
-                          document.getElementById("requesterId")?.setAttribute("value", r.id);
+                          setValue("requesterId", r.id);
                         }}
                       >
                         <span className="font-medium">{r.nome}</span>
@@ -328,7 +329,7 @@ const NewCall = () => {
                         onClick={() => {
                           setCategorySearch(cat.descricao);
                           setShowCategoryDropdown(false);
-                          document.getElementById("categoryId")?.setAttribute("value", cat.id);
+                          setValue("categoryId", cat.id);
                         }}
                       >
                         {cat.descricao}
@@ -379,7 +380,7 @@ const NewCall = () => {
                         onClick={() => {
                           setEquipmentSearch(`${eq.nome} - ${eq.marcaModelo}`);
                           setShowEquipmentDropdown(false);
-                          document.getElementById("equipmentId")?.setAttribute("value", eq.id);
+                          setValue("equipmentId", eq.id);
                         }}
                       >
                         <span className="font-medium">{eq.nome}</span>

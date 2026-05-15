@@ -10,6 +10,7 @@ import {
 import type { CommentT, TaskT } from "../../types"
 
 import { useToast } from "../../context/toastContext"
+import { useAuth } from "../../context/authContext"
 import { useTicketMutations } from "../../hooks/useTicketMutations"
 
 type Tab =
@@ -34,7 +35,8 @@ const TaskModal = ({
     onClose,
     task,
 }: Props) => {
-    const CURRENT_USER = "Denix"
+    const { user } = useAuth()
+    const CURRENT_USER = user?.username || "Desconhecido"
 
     const { showMessage } = useToast()
 
@@ -83,8 +85,14 @@ const TaskModal = ({
 
     const priorityClass = useMemo(() => {
         switch (task?.prioridade) {
+            case "Crítica":
+                return "bg-[#dc2626]"
+
             case "Alta":
                 return "bg-[#ff6900]"
+
+            case "Média":
+                return "bg-[#f0b100]"
 
             case "Media":
                 return "bg-[#f0b100]"

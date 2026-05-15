@@ -24,6 +24,7 @@ import type {
 
 import { useTickets } from "../../hooks/useTickets"
 import { useTicketMutations } from "../../hooks/useTicketMutations"
+import { useAuth } from "../../context/authContext"
 
 import {
   MdNavigateBefore,
@@ -84,7 +85,7 @@ const INITIAL_COLUMNS: Columns = {
   todo:    { name: "Aguardando Cliente", items: [] },
 }
 
-const PRIORITY_OPTIONS = ["Todos", "Alta", "Média", "Baixa"]
+const PRIORITY_OPTIONS = ["Todos", "Crítica", "Alta", "Média", "Baixa"]
 const SORT_OPTIONS = [
   { value: "date-desc",      label: "Mais recentes" },
   { value: "date-asc",       label: "Mais antigos" },
@@ -92,7 +93,7 @@ const SORT_OPTIONS = [
   { value: "priority-asc",   label: "Menor prioridade" },
 ]
 
-const priorityScore: Record<string, number> = { Alta: 3, Média: 2, Media: 2, Baixa: 1 }
+const priorityScore: Record<string, number> = { Crítica: 4, Alta: 3, Média: 2, Media: 2, Baixa: 1 }
 
 // ─── Loading Skeleton ─────────────────────────────────────────────────────────
 const CardSkeleton = () => (
@@ -125,7 +126,8 @@ const ColumnSkeleton = ({ config }: { config: typeof COLUMN_CONFIG[string] }) =>
 
 // ─── Main Board ───────────────────────────────────────────────────────────────
 const Boards = () => {
-  const CURRENT_USER = "Denix"
+  const { user } = useAuth()
+  const CURRENT_USER = user?.username || "Desconhecido"
 
   const [selectedTask, setSelectedTask] = useState<TaskT | null>(null)
   const [columns, setColumns]           = useState<Columns>(INITIAL_COLUMNS)
@@ -287,6 +289,7 @@ const Boards = () => {
                 const active = filterPriority === p
                 const colorMap: Record<string, string> = {
                   Todos: active ? "bg-gray-700 text-white" : "text-gray-600 hover:bg-gray-100",
+                  Crítica: active ? "bg-red-700 text-white shadow-red-300 shadow-md" : "text-red-700 hover:bg-red-50 border-red-300",
                   Alta:  active ? "bg-red-500 text-white shadow-red-200 shadow-md" : "text-red-600 hover:bg-red-50 border-red-200",
                   Média: active ? "bg-amber-500 text-white shadow-amber-200 shadow-md" : "text-amber-600 hover:bg-amber-50 border-amber-200",
                   Baixa: active ? "bg-green-500 text-white shadow-green-200 shadow-md" : "text-green-600 hover:bg-green-50 border-green-200",

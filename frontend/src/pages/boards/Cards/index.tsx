@@ -24,6 +24,13 @@ const PRIORITY_CONFIG: Record<string, {
   bar: string
   label: string
 }> = {
+  Crítica: {
+    bg: "bg-red-100",
+    text: "text-red-700",
+    dot: "bg-red-600",
+    bar: "bg-gradient-to-b from-red-600 to-red-500",
+    label: "Crítica",
+  },
   Alta: {
     bg: "bg-red-50",
     text: "text-red-600",
