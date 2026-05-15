@@ -11,6 +11,8 @@ import {
 
 import { TaskT } from "../../../types"
 
+import { formatData } from "../../../utils/formatData"
+
 interface TaskProps {
   task: TaskT
   columnId: string
@@ -77,14 +79,6 @@ const Card = ({ columnId, task, onOpen }: TaskProps) => {
 
   const prio = PRIORITY_CONFIG[task.prioridade] ?? DEFAULT_PRIORITY
 
-  const formatDate = new Date(task.createdAt).toLocaleString("pt-BR", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-  })
-
   const style = {
     transform: transform
       ? `translate3d(${transform.x}px, ${transform.y}px, 0)`
@@ -149,7 +143,7 @@ const Card = ({ columnId, task, onOpen }: TaskProps) => {
           <div className="mt-2 flex items-center justify-between gap-3 border-t border-dashed border-gray-100 pt-3">
             <div className="flex items-center gap-1.5 text-[12px] text-gray-400">
               <MdOutlineAccessTime size={15} className="shrink-0" />
-              <span>{formatDate}</span>
+              <span>{formatData(task.createdAt)}</span>
             </div>
 
             <div className="flex items-center gap-2">
