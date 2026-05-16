@@ -10,7 +10,6 @@ export type UserData = {
 };
 
 export type LoginResponse = {
-  token: string;
   user: UserData;
 };
 
@@ -30,6 +29,10 @@ export const authService = {
   login: async (credentials: LoginCredentials): Promise<LoginResponse> => {
     const { data } = await api.post<LoginResponse>('/auth/login', credentials);
     return data;
+  },
+
+  logout: async (): Promise<void> => {
+    await api.post('/auth/logout');
   },
 
   register: async (userData: RegisterData): Promise<UserData> => {

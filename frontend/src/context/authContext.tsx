@@ -7,38 +7,32 @@ type AuthProviderProps = {
 
 type AuthContextType = {
   user: UserData | null;
-  token: string | null;
   loading: boolean;
   isAuthenticated: boolean;
   login: (credentials: LoginCredentials) => Promise<void>;
-  logout: () => void;
+  logout: () => Promise<void>;
   /** Verifica se o usuário logado pertence a algum dos setores informados */
   hasPermission: (...setores: Setor[]) => boolean;
 };
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
-const TOKEN_KEY = "@sigti:token";
 const USER_KEY = "@sigti:user";
 
 export function AuthProvider({ children }: AuthProviderProps) {
   const [user, setUser] = useState<UserData | null>(null);
-  const [token, setToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   // Recupera a sessão do localStorage ao montar
   useEffect(() => {
-    const storedToken = localStorage.getItem(TOKEN_KEY);
     const storedUser = localStorage.getItem(USER_KEY);
 
-    if (storedToken && storedUser) {
+    if (storedUser) {
       try {
         const parsedUser = JSON.parse(storedUser) as UserData;
-        setToken(storedToken);
         setUser(parsedUser);
       } catch {
         // Dados corrompidos — limpa tudo
-        localStorage.removeItem(TOKEN_KEY);
         localStorage.removeItem(USER_KEY);
       }
     }
@@ -52,18 +46,19 @@ export function AuthProvider({ children }: AuthProviderProps) {
       password: credentials.password,
     });
 
-    localStorage.setItem(TOKEN_KEY, response.token);
     localStorage.setItem(USER_KEY, JSON.stringify(response.user));
-
-    setToken(response.token);
     setUser(response.user);
   }, []);
 
-  const logout = useCallback(() => {
-    localStorage.removeItem(TOKEN_KEY);
-    localStorage.removeItem(USER_KEY);
-    setToken(null);
-    setUser(null);
+  const logout = useCallback(async () => {
+    try {
+      await authService.logout();
+    } catch (error) {
+      console.error("Erro ao fazer logout no servidor:", error);
+    } finally {
+      localStorage.removeItem(USER_KEY);
+      setUser(null);
+    }
   }, []);
 
   const hasPermission = useCallback(
@@ -74,11 +69,11 @@ export function AuthProvider({ children }: AuthProviderProps) {
     [user]
   );
 
-  const isAuthenticated = !!token && !!user;
+  const isAuthenticated = !!user;
 
   return (
     <AuthContext.Provider
-      value={{ user, token, loading, isAuthenticated, login, logout, hasPermission }}
+      value={{ user, loading, isAuthenticated, login, logout, hasPermission }}
     >
       {children}
     </AuthContext.Provider>

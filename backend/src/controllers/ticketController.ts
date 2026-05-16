@@ -38,6 +38,7 @@ export const createTicket = async (req: Request, res: Response) => {
         classificacao,
         prioridade,
         status: 'backlog',
+        anexo: req.file ? req.file.filename : null,
       },
     });
     res.status(201).json(ticket);

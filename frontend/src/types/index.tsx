@@ -31,6 +31,7 @@ export type TaskT = {
   prioridade: string
   status: string
   isArchived: boolean
+  anexo?: string
   comments?: CommentT[]
   history?: HistoryItem[]
 }

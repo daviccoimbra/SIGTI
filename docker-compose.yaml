@@ -5,38 +5,42 @@ services:
     restart: always
     env_file:
       - .env
-    expose:
-      - "5432"
+    ports:
+      - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sigti -d sigti_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
     networks:
       - sigti_network
+
   backend:
     build:
       context: ./backend
       dockerfile: Dockerfile
-
     container_name: sigti_backend
-
     restart: unless-stopped
-
     depends_on:
-      - postgres
-
+      postgres:
+        condition: service_healthy
     env_file:
       - .env
-
-    expose:
-      - "3001"
-
+    ports:
+      - "3001:3001"
     volumes:
       - ./backend:/app
       - /app/node_modules
       - ./backend/archive:/app/archive
-
-    command: sh -c "npx prisma migrate deploy && npx prisma db seed && npm run dev"
-
+    # 100% automated flow: install, generate, migrate, seed, dev
+    command: >
+      sh -c "npm install && 
+             npx prisma generate && 
+             npx prisma migrate dev --name init && 
+             npx prisma db seed && 
+             npm run dev"
     networks:
       - sigti_network
 
@@ -44,26 +48,21 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
-
     container_name: sigti_frontend
-
     restart: unless-stopped
-
     depends_on:
       - backend
-
     ports:
       - "5173:5173"
-
     volumes:
       - ./frontend:/app
       - /app/node_modules
-
-    command: npm run dev
-
+    environment:
+      - CHOKIDAR_USEPOLLING=true
+      - WATCHPACK_POLLING=true
+    command: sh -c "npm install && npm run dev"
     networks:
       - sigti_network
-
 
 volumes:
   postgres_data:

@@ -48,6 +48,7 @@ const priorities = [
 const NewCall = () => {
   const [isDragging, setIsDragging] = useState<boolean>(false);
   const [file, setFile] = useState<File | null>(null);
+  const fileInputRef = useState<HTMLInputElement | null>(null);
   const [isRequesterModalOpen, setIsRequesterModalOpen] = useState(false);
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
   const [isEquipmentModalOpen, setIsEquipmentModalOpen] = useState(false);
@@ -57,9 +58,13 @@ const NewCall = () => {
   const [requesterSearch, setRequesterSearch] = useState("");
   const [categorySearch, setCategorySearch] = useState("");
   const [equipmentSearch, setEquipmentSearch] = useState("");
+  const [classificationSearch, setClassificationSearch] = useState("");
   const [showRequesterDropdown, setShowRequesterDropdown] = useState(false);
   const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
   const [showEquipmentDropdown, setShowEquipmentDropdown] = useState(false);
+  const [showClassificationDropdown, setShowClassificationDropdown] = useState(false);
+
+  const classificationOptions = ["Erro", "Dúvida", "Solicitação", "Configuração", "Outros"];
 
   const navigate = useNavigate();
   const { showMessage } = useToast();
@@ -103,6 +108,7 @@ const NewCall = () => {
       setShowRequesterDropdown(false);
       setShowCategoryDropdown(false);
       setShowEquipmentDropdown(false);
+      setShowClassificationDropdown(false);
     };
     document.addEventListener("click", handleClickOutside);
     return () => document.removeEventListener("click", handleClickOutside);
@@ -132,6 +138,12 @@ const NewCall = () => {
     );
   }, [equipments, equipmentSearch]);
 
+  const filteredClassifications = useMemo(() => {
+    if (!classificationSearch.trim()) return classificationOptions;
+    const search = classificationSearch.toLowerCase();
+    return classificationOptions.filter(opt => opt.toLowerCase().includes(search));
+  }, [classificationSearch]);
+
   const {
     register,
     handleSubmit,
@@ -148,20 +160,23 @@ const NewCall = () => {
       const protocolo = new Date().toISOString().replace(/\D/g, "").slice(0, 17);
       const selectedRequester = requesters.find(r => r.id === data.requesterId);
 
-      const payload = {
-        titulo: data.titulo,
-        descricao: data.descricao,
-        classificacao: data.classificacao,
-        prioridade: data.prioridade,
-        protocolo,
-        requesterId: data.requesterId,
-        categoryId: data.categoryId,
-        equipmentId: data.equipmentId,
-        solicitante: selectedRequester ? selectedRequester.nome : "Analista de TI",
-        departamento: selectedRequester ? selectedRequester.setor : "TI",
-      };
+      const formData = new FormData();
+      formData.append("titulo", data.titulo);
+      formData.append("descricao", data.descricao);
+      formData.append("classificacao", data.classificacao);
+      formData.append("prioridade", data.prioridade);
+      formData.append("protocolo", protocolo);
+      formData.append("requesterId", data.requesterId);
+      formData.append("categoryId", data.categoryId);
+      formData.append("equipmentId", data.equipmentId);
+      formData.append("solicitante", selectedRequester ? selectedRequester.nome : "Analista de TI");
+      formData.append("departamento", selectedRequester ? selectedRequester.setor : "TI");
+      
+      if (file) {
+        formData.append("anexo", file);
+      }
 
-      await createTicket.mutateAsync(payload);
+      await createTicket.mutateAsync(formData);
       showMessage("Chamado criado com sucesso!", "success");
       reset();
       navigate("/boards");
@@ -238,7 +253,7 @@ const NewCall = () => {
                 {errors.titulo && <span className="text-red-500 text-xs mt-1">Campo obrigatório!</span>}
               </div>
 
-              <div className="relative">
+              <div className="relative" onClick={(e) => e.stopPropagation()}>
                 <label className={`${labelClass} mb-2 block`}>
                   <MdPerson className="text-indigo-600" />
                   Solicitante *
@@ -251,13 +266,20 @@ const NewCall = () => {
                       onChange={(e) => {
                         setRequesterSearch(e.target.value);
                         setShowRequesterDropdown(true);
+                        setValue("requesterId", ""); // Clear ID if typing
                       }}
-                      onFocus={() => setShowRequesterDropdown(true)}
+                      onFocus={() => {
+                        setShowRequesterDropdown(true);
+                        setShowCategoryDropdown(false);
+                        setShowEquipmentDropdown(false);
+                        setShowClassificationDropdown(false);
+                      }}
+                      onClick={() => setShowRequesterDropdown(true)}
                       className={`${inputClass} w-full ${errors.requesterId ? "border-red-400" : ""}`}
                       placeholder="Digite para buscar..."
                     />
                     <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
-                      <MdKeyboardArrowDown className="text-gray-400" />
+                      <MdKeyboardArrowDown className={`text-gray-400 transition-transform ${showRequesterDropdown ? "rotate-180" : ""}`} />
                     </div>
                   </div>
                   <button
@@ -268,29 +290,33 @@ const NewCall = () => {
                     <MdAdd className="text-xl" />
                   </button>
                 </div>
-                {showRequesterDropdown && filteredRequesters.length > 0 && (
-                  <div className="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-xl shadow-lg max-h-48 overflow-auto">
-                    {filteredRequesters.map((r) => (
-                      <div
-                        key={r.id}
-                        className="px-4 py-2 hover:bg-indigo-50 cursor-pointer text-sm text-gray-700"
-                        onClick={() => {
-                          setRequesterSearch(`${r.nome} - ${r.setor}`);
-                          setShowRequesterDropdown(false);
-                          setValue("requesterId", r.id);
-                        }}
-                      >
-                        <span className="font-medium">{r.nome}</span>
-                        <span className="text-gray-400"> - {r.setor}</span>
-                      </div>
-                    ))}
+                {showRequesterDropdown && (
+                  <div className="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-xl shadow-lg max-h-48 overflow-auto animate-fadeIn">
+                    {filteredRequesters.length > 0 ? (
+                      filteredRequesters.map((r) => (
+                        <div
+                          key={r.id}
+                          className="px-4 py-2 hover:bg-indigo-50 cursor-pointer text-sm text-gray-700 border-b border-gray-50 last:border-0"
+                          onClick={() => {
+                            setRequesterSearch(`${r.nome} - ${r.setor}`);
+                            setShowRequesterDropdown(false);
+                            setValue("requesterId", r.id);
+                          }}
+                        >
+                          <div className="font-medium">{r.nome}</div>
+                          <div className="text-xs text-gray-400">{r.setor}</div>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="px-4 py-3 text-sm text-gray-400 italic">Nenhum resultado encontrado</div>
+                    )}
                   </div>
                 )}
                 <input type="hidden" {...register("requesterId", { required: true })} id="requesterId" />
                 {errors.requesterId && <span className="text-red-500 text-xs mt-1">Campo obrigatório!</span>}
               </div>
 
-              <div className="relative">
+              <div className="relative" onClick={(e) => e.stopPropagation()}>
                 <label className={`${labelClass} mb-2 block`}>
                   <MdCategory className="text-indigo-600" />
                   Categoria *
@@ -303,13 +329,20 @@ const NewCall = () => {
                       onChange={(e) => {
                         setCategorySearch(e.target.value);
                         setShowCategoryDropdown(true);
+                        setValue("categoryId", ""); // Clear ID if typing
                       }}
-                      onFocus={() => setShowCategoryDropdown(true)}
+                      onFocus={() => {
+                        setShowCategoryDropdown(true);
+                        setShowRequesterDropdown(false);
+                        setShowEquipmentDropdown(false);
+                        setShowClassificationDropdown(false);
+                      }}
+                      onClick={() => setShowCategoryDropdown(true)}
                       className={`${inputClass} w-full ${errors.categoryId ? "border-red-400" : ""}`}
                       placeholder="Digite para buscar..."
                     />
                     <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
-                      <MdKeyboardArrowDown className="text-gray-400" />
+                      <MdKeyboardArrowDown className={`text-gray-400 transition-transform ${showCategoryDropdown ? "rotate-180" : ""}`} />
                     </div>
                   </div>
                   <button
@@ -320,28 +353,32 @@ const NewCall = () => {
                     <MdAdd className="text-xl" />
                   </button>
                 </div>
-                {showCategoryDropdown && filteredCategories.length > 0 && (
-                  <div className="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-xl shadow-lg max-h-48 overflow-auto">
-                    {filteredCategories.map((cat) => (
-                      <div
-                        key={cat.id}
-                        className="px-4 py-2 hover:bg-indigo-50 cursor-pointer text-sm text-gray-700"
-                        onClick={() => {
-                          setCategorySearch(cat.descricao);
-                          setShowCategoryDropdown(false);
-                          setValue("categoryId", cat.id);
-                        }}
-                      >
-                        {cat.descricao}
-                      </div>
-                    ))}
+                {showCategoryDropdown && (
+                  <div className="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-xl shadow-lg max-h-48 overflow-auto animate-fadeIn">
+                    {filteredCategories.length > 0 ? (
+                      filteredCategories.map((cat) => (
+                        <div
+                          key={cat.id}
+                          className="px-4 py-3 hover:bg-indigo-50 cursor-pointer text-sm text-gray-700 border-b border-gray-50 last:border-0"
+                          onClick={() => {
+                            setCategorySearch(cat.descricao);
+                            setShowCategoryDropdown(false);
+                            setValue("categoryId", cat.id);
+                          }}
+                        >
+                          {cat.descricao}
+                        </div>
+                      ))
+                    ) : (
+                      <div className="px-4 py-3 text-sm text-gray-400 italic">Nenhuma categoria encontrada</div>
+                    )}
                   </div>
                 )}
                 <input type="hidden" {...register("categoryId", { required: true })} id="categoryId" />
                 {errors.categoryId && <span className="text-red-500 text-xs mt-1">Campo obrigatório!</span>}
               </div>
 
-              <div className="relative">
+              <div className="relative" onClick={(e) => e.stopPropagation()}>
                 <label className={`${labelClass} mb-2 block`}>
                   <MdComputer className="text-indigo-600" />
                   Equipamento *
@@ -354,13 +391,20 @@ const NewCall = () => {
                       onChange={(e) => {
                         setEquipmentSearch(e.target.value);
                         setShowEquipmentDropdown(true);
+                        setValue("equipmentId", ""); // Clear ID if typing
                       }}
-                      onFocus={() => setShowEquipmentDropdown(true)}
+                      onFocus={() => {
+                        setShowEquipmentDropdown(true);
+                        setShowRequesterDropdown(false);
+                        setShowCategoryDropdown(false);
+                        setShowClassificationDropdown(false);
+                      }}
+                      onClick={() => setShowEquipmentDropdown(true)}
                       className={`${inputClass} w-full ${errors.equipmentId ? "border-red-400" : ""}`}
                       placeholder="Digite para buscar..."
                     />
                     <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
-                      <MdKeyboardArrowDown className="text-gray-400" />
+                      <MdKeyboardArrowDown className={`text-gray-400 transition-transform ${showEquipmentDropdown ? "rotate-180" : ""}`} />
                     </div>
                   </div>
                   <button
@@ -371,46 +415,82 @@ const NewCall = () => {
                     <MdAdd className="text-xl" />
                   </button>
                 </div>
-                {showEquipmentDropdown && filteredEquipments.length > 0 && (
-                  <div className="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-xl shadow-lg max-h-48 overflow-auto">
-                    {filteredEquipments.map((eq) => (
-                      <div
-                        key={eq.id}
-                        className="px-4 py-2 hover:bg-indigo-50 cursor-pointer text-sm text-gray-700"
-                        onClick={() => {
-                          setEquipmentSearch(`${eq.nome} - ${eq.marcaModelo}`);
-                          setShowEquipmentDropdown(false);
-                          setValue("equipmentId", eq.id);
-                        }}
-                      >
-                        <span className="font-medium">{eq.nome}</span>
-                        <span className="text-gray-400"> - {eq.marcaModelo}</span>
-                      </div>
-                    ))}
+                {showEquipmentDropdown && (
+                  <div className="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-xl shadow-lg max-h-48 overflow-auto animate-fadeIn">
+                    {filteredEquipments.length > 0 ? (
+                      filteredEquipments.map((eq) => (
+                        <div
+                          key={eq.id}
+                          className="px-4 py-2 hover:bg-indigo-50 cursor-pointer text-sm text-gray-700 border-b border-gray-50 last:border-0"
+                          onClick={() => {
+                            setEquipmentSearch(`${eq.nome} - ${eq.marcaModelo}`);
+                            setShowEquipmentDropdown(false);
+                            setValue("equipmentId", eq.id);
+                          }}
+                        >
+                          <div className="font-medium">{eq.nome}</div>
+                          <div className="text-xs text-gray-400">{eq.marcaModelo}</div>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="px-4 py-3 text-sm text-gray-400 italic">Nenhum equipamento encontrado</div>
+                    )}
                   </div>
                 )}
                 <input type="hidden" {...register("equipmentId", { required: true })} id="equipmentId" />
                 {errors.equipmentId && <span className="text-red-500 text-xs mt-1">Campo obrigatório!</span>}
               </div>
 
-              <div>
+              <div className="relative" onClick={(e) => e.stopPropagation()}>
                 <label className={`${labelClass} mb-2 block`}>
                   <MdLabel className="text-indigo-600" />
                   Classificação *
                 </label>
-                <input
-                  list="classificacoes"
-                  className={inputClass}
-                  placeholder="Selecione ou digite..."
-                  {...register("classificacao", { required: true })}
-                />
-                <datalist id="classificacoes">
-                  <option value="Erro" />
-                  <option value="Dúvida" />
-                  <option value="Solicitação" />
-                  <option value="Configuração" />
-                  <option value="Outros" />
-                </datalist>
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={classificationSearch}
+                    onChange={(e) => {
+                      setClassificationSearch(e.target.value);
+                      setShowClassificationDropdown(true);
+                      setValue("classificacao", ""); // Clear value if typing
+                    }}
+                    onFocus={() => {
+                      setShowClassificationDropdown(true);
+                      setShowRequesterDropdown(false);
+                      setShowCategoryDropdown(false);
+                      setShowEquipmentDropdown(false);
+                    }}
+                    onClick={() => setShowClassificationDropdown(true)}
+                    className={`${inputClass} w-full ${errors.classificacao ? "border-red-400" : ""}`}
+                    placeholder="Selecione ou digite..."
+                  />
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
+                    <MdKeyboardArrowDown className={`text-gray-400 transition-transform ${showClassificationDropdown ? "rotate-180" : ""}`} />
+                  </div>
+                </div>
+                {showClassificationDropdown && (
+                  <div className="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-xl shadow-lg max-h-48 overflow-auto animate-fadeIn">
+                    {filteredClassifications.length > 0 ? (
+                      filteredClassifications.map((opt) => (
+                        <div
+                          key={opt}
+                          className="px-4 py-3 hover:bg-indigo-50 cursor-pointer text-sm text-gray-700 border-b border-gray-50 last:border-0"
+                          onClick={() => {
+                            setClassificationSearch(opt);
+                            setShowClassificationDropdown(false);
+                            setValue("classificacao", opt);
+                          }}
+                        >
+                          {opt}
+                        </div>
+                      ))
+                    ) : (
+                      <div className="px-4 py-3 text-sm text-gray-400 italic">Nenhum resultado</div>
+                    )}
+                  </div>
+                )}
+                <input type="hidden" {...register("classificacao", { required: true })} id="classificacao" />
                 {errors.classificacao && <span className="text-red-500 text-xs mt-1">Campo obrigatório!</span>}
               </div>
             </div>
@@ -461,6 +541,7 @@ const NewCall = () => {
                 Anexo (opcional)
               </label>
               <label
+                htmlFor="fileInput"
                 onDrop={handleDrop}
                 onDragOver={handleDragOver}
                 onDragLeave={handleDragLeave}

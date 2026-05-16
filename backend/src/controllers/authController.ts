@@ -54,8 +54,15 @@ export const login = async (req: Request, res: Response) => {
       { expiresIn: '8h' }
     );
 
+    // Envia o token em um cookie httpOnly
+    res.cookie('token', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax', // ou 'none' se usar domínios diferentes com https
+      maxAge: 8 * 60 * 60 * 1000, // 8 horas em milissegundos
+    });
+
     return res.json({
-      token,
       user: {
         id: user.id,
         username: user.username,
@@ -67,6 +74,15 @@ export const login = async (req: Request, res: Response) => {
     console.error('Erro ao fazer login:', error);
     return res.status(500).json({ error: 'Erro interno ao fazer login' });
   }
+};
+
+/**
+ * POST /api/auth/logout
+ * Limpa o cookie de autenticação.
+ */
+export const logout = async (req: Request, res: Response) => {
+  res.clearCookie('token');
+  return res.json({ message: 'Logout realizado com sucesso' });
 };
 
 /**

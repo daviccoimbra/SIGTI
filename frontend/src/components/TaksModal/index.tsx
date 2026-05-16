@@ -5,6 +5,8 @@ import {
     MdClose,
     MdDelete,
     MdUnarchive,
+    MdAttachFile,
+    MdFileDownload,
 } from "react-icons/md"
 
 import type { CommentT, TaskT } from "../../types"
@@ -17,18 +19,13 @@ type Tab =
     | "detalhes"
     | "comentarios"
     | "historico"
+    | "anexos"
 
 interface Props {
     isOpen: boolean
     onClose: () => void
     task: TaskT | null
 }
-
-const tabs: Tab[] = [
-    "detalhes",
-    "comentarios",
-    "historico",
-]
 
 const TaskModal = ({
     isOpen,
@@ -278,7 +275,12 @@ const TaskModal = ({
 
                 {/* TABS */}
                 <div className="mb-4 flex gap-4 border-b">
-                    {tabs.map((item) => (
+                    {[
+                        "detalhes",
+                        "comentarios",
+                        "historico",
+                        ...(task.anexo ? ["anexos" as Tab] : []),
+                    ].map((item) => (
                         <button
                             key={item}
                             onClick={() =>
@@ -300,60 +302,29 @@ const TaskModal = ({
                     <div className="space-y-2">
                         <div className="grid grid-cols-2 gap-4">
                             <p>
-                                <b>
-                                    Solicitante:
-                                </b>{" "}
-                                {
-                                    task.solicitante
-                                }
+                                <b>Solicitante:</b> {task.solicitante}
                             </p>
-
                             <p>
-                                <b>
-                                    Departamento:
-                                </b>{" "}
-                                {
-                                    task.departamento
-                                }
+                                <b>Departamento:</b> {task.departamento}
                             </p>
-
                             <p>
-                                <b>
-                                    Categoria:
-                                </b>{" "}
-                                {
-                                    task.category?.descricao || "Não informada"
-                                }
+                                <b>Categoria:</b> {task.category?.descricao || "Não informada"}
                             </p>
-
                             <p>
-                                <b>
-                                    Classificação:
-                                </b>{" "}
-                                {
-                                    task.classificacao || "Não informada"
-                                }
+                                <b>Classificação:</b> {task.classificacao || "Não informada"}
                             </p>
                         </div>
 
                         <p>
-                            <b>
-                                Equipamento:
-                            </b>{" "}
-                            {
-                                task.equipment 
-                                    ? `${task.equipment.nome} (${task.equipment.marcaModelo})`
-                                    : "Nenhum equipamento vinculado"
+                            <b>Equipamento:</b> {task.equipment 
+                                ? `${task.equipment.nome} (${task.equipment.marcaModelo})`
+                                : "Nenhum equipamento vinculado"
                             }
                         </p>
 
                         <div className="mt-4 border-t pt-4">
                             <h3 className="mb-2 font-bold text-gray-700">Descrição do Problema:</h3>
-                            <p className="text-gray-700">
-                                {
-                                    task.descricao
-                                }
-                            </p>
+                            <p className="text-gray-700">{task.descricao}</p>
                         </div>
                     </div>
                 )}
@@ -364,83 +335,39 @@ const TaskModal = ({
                         {!task.isArchived && (
                             <>
                                 <textarea
-                                    value={
-                                        newComment
-                                    }
-                                    onChange={(
-                                        e
-                                    ) =>
-                                        setNewComment(
-                                            e.target
-                                                .value
-                                        )
-                                    }
+                                    value={newComment}
+                                    onChange={(e) => setNewComment(e.target.value)}
                                     placeholder="Escreva um comentário..."
                                     className="w-full rounded border p-2 outline-none focus:border-blue-500"
                                 />
 
                                 <button
                                     type="button"
-                                    disabled={
-                                        addComment.isPending
-                                    }
-                                    onClick={
-                                        handleAddComment
-                                    }
+                                    disabled={addComment.isPending}
+                                    onClick={handleAddComment}
                                     className="mt-2 rounded bg-blue-600 px-3 py-1 text-white transition hover:bg-blue-700 disabled:opacity-50"
                                 >
-                                    {addComment.isPending
-                                        ? "Comentando..."
-                                        : "Comentar"}
+                                    {addComment.isPending ? "Comentando..." : "Comentar"}
                                 </button>
                             </>
                         )}
 
                         <div className="mt-4 max-h-[300px] space-y-3 overflow-y-auto pr-2">
-                            {!task.comments ||
-                                task.comments
-                                    .length ===
-                                0 ? (
-                                <div className="text-sm text-gray-500">
-                                    Nenhum comentário
-                                    ainda...
-                                </div>
+                            {!task.comments || task.comments.length === 0 ? (
+                                <div className="text-sm text-gray-500">Nenhum comentário ainda...</div>
                             ) : (
                                 task.comments
                                     .slice()
                                     .reverse()
-                                    .map(
-                                        (
-                                            comment
-                                        ) => (
-                                            <div
-                                                key={
-                                                    comment.id
-                                                }
-                                                className="rounded border bg-gray-50 p-3"
-                                            >
-                                                <div className="mb-1 flex justify-between text-xs text-gray-400">
-                                                    <span className="font-bold text-gray-600">
-                                                        {
-                                                            comment.user
-                                                        }
-                                                    </span>
-
-                                                    <span>
-                                                        {new Date(
-                                                            comment.date
-                                                        ).toLocaleString()}
-                                                    </span>
-                                                </div>
-
-                                                <p className="text-sm text-gray-700">
-                                                    {
-                                                        comment.message
-                                                    }
-                                                </p>
+                                    .map((comment) => (
+                                        <div key={comment.id} className="rounded border bg-gray-50 p-3">
+                                            <div className="mb-1 flex justify-between text-xs text-gray-400">
+                                                <span className="font-bold text-gray-600">{comment.user}</span>
+                                                <span>{new Date(comment.date).toLocaleString()}</span>
                                             </div>
-                                        )
-                                    )
+                                            <p className="text-sm text-gray-700">{comment.message}</p>
+                                        </div>
+                                    ))
                             )}
                         </div>
                     </div>
@@ -449,57 +376,73 @@ const TaskModal = ({
                 {/* HISTÓRICO */}
                 {tab === "historico" && (
                     <div className="max-h-[300px] space-y-3 overflow-auto">
-                        {!task.history ||
-                            task.history
-                                .length === 0 ? (
-                            <div className="text-gray-500">
-                                Nenhum histórico
-                                ainda...
-                            </div>
+                        {!task.history || task.history.length === 0 ? (
+                            <div className="text-gray-500">Nenhum histórico ainda...</div>
                         ) : (
                             task.history
                                 .slice()
                                 .reverse()
-                                .map(
-                                    (
-                                        history,
-                                        index
-                                    ) => (
-                                        <div
-                                            key={
-                                                index
-                                            }
-                                            className="rounded border bg-gray-50 p-3 text-sm"
-                                        >
-                                            <p className="text-gray-700">
-                                                <span className="font-bold">
-                                                    {
-                                                        history.user
-                                                    }
-                                                </span>{" "}
-                                                moveu
-                                                de{" "}
-                                                <span className="font-bold">
-                                                    {
-                                                        history.from
-                                                    }
-                                                </span>{" "}
-                                                para{" "}
-                                                <span className="font-bold">
-                                                    {
-                                                        history.to
-                                                    }
-                                                </span>
-                                            </p>
-
-                                            <span className="text-xs text-gray-400">
-                                                {new Date(
-                                                    history.date
-                                                ).toLocaleString()}
-                                            </span>
-                                        </div>
-                                    )
-                                )
+                                .map((history, index) => (
+                                    <div key={index} className="rounded border bg-gray-50 p-3 text-sm">
+                                        <p className="text-gray-700">
+                                            <span className="font-bold">{history.user}</span> moveu de{" "}
+                                            <span className="font-bold">{history.from}</span> para{" "}
+                                            <span className="font-bold">{history.to}</span>
+                                        </p>
+                                        <span className="text-xs text-gray-400">
+                                            {new Date(history.date).toLocaleString()}
+                                        </span>
+                                    </div>
+                                ))
+                        )}
+                    </div>
+                )}
+                
+                {/* ANEXOS */}
+                {tab === "anexos" && task.anexo && (
+                    <div className="space-y-4">
+                        <div className="flex items-center justify-between rounded-xl bg-blue-50 p-4 border border-blue-100">
+                            <div className="flex items-center gap-3">
+                                <div className="p-2 bg-blue-600 rounded-lg text-white">
+                                    <MdAttachFile size={20} />
+                                </div>
+                                <div>
+                                    <p className="text-sm font-bold text-gray-700">Arquivo Anexado</p>
+                                    <p className="text-xs text-gray-500 truncate max-w-[200px] md:max-w-md">{task.anexo}</p>
+                                </div>
+                            </div>
+                            <a 
+                                href={`http://localhost:3001/archive/${task.anexo}`} 
+                                target="_blank" 
+                                rel="noreferrer"
+                                className="flex items-center gap-2 bg-white text-blue-600 border border-blue-200 px-4 py-2 rounded-xl text-sm font-bold hover:bg-blue-50 transition-colors shadow-sm"
+                            >
+                                <MdFileDownload size={18} />
+                                Download
+                            </a>
+                        </div>
+                        
+                        {(task.anexo.toLowerCase().endsWith('.png') || 
+                          task.anexo.toLowerCase().endsWith('.jpg') || 
+                          task.anexo.toLowerCase().endsWith('.jpeg') || 
+                          task.anexo.toLowerCase().endsWith('.webp')) && (
+                            <div className="mt-4 border rounded-2xl overflow-hidden shadow-sm bg-gray-50">
+                                <img 
+                                    src={`http://localhost:3001/archive/${task.anexo}`} 
+                                    alt="Anexo do chamado" 
+                                    className="w-full h-auto max-h-[400px] object-contain mx-auto"
+                                />
+                            </div>
+                        )}
+                        
+                        {task.anexo.toLowerCase().endsWith('.pdf') && (
+                            <div className="mt-4 border rounded-2xl overflow-hidden h-[400px] shadow-sm">
+                                <iframe 
+                                    src={`http://localhost:3001/archive/${task.anexo}`} 
+                                    title="PDF Viewer"
+                                    className="w-full h-full border-none"
+                                />
+                            </div>
                         )}
                     </div>
                 )}
