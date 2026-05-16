@@ -91,7 +91,7 @@ export const logout = async (req: Request, res: Response) => {
  */
 export const register = async (req: Request, res: Response) => {
   try {
-    const { username, password, nome, setor } = req.body;
+    const { username, password, nome, setor, email, departamento, cargo } = req.body;
 
     if (!username || !password || !nome || !setor) {
       return res.status(400).json({
@@ -125,6 +125,9 @@ export const register = async (req: Request, res: Response) => {
         password: hashedPassword,
         nome,
         setor,
+        email,
+        departamento,
+        cargo,
       },
     });
 
@@ -133,7 +136,11 @@ export const register = async (req: Request, res: Response) => {
       username: user.username,
       nome: user.nome,
       setor: user.setor,
+      email: user.email,
+      departamento: user.departamento,
+      cargo: user.cargo,
     });
+
   } catch (error) {
     console.error('Erro ao registrar usuário:', error);
     return res.status(500).json({ error: 'Erro interno ao registrar usuário' });

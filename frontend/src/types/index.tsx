@@ -60,6 +60,18 @@ export type EquipmentT = {
   createdAt: string
 }
 
+export type UserT = {
+  id: string
+  username: string
+  nome: string
+  email?: string
+  departamento?: string
+  cargo?: string
+  setor: 'ADMIN' | 'GESTAO'
+  ativo: boolean
+  createdAt: string
+}
+
 type Column = {
     name: string;
     items: TaskT[];
@@ -67,4 +79,4 @@ type Column = {
 
 export type Columns = {
     [key: string]: Column
-}
+}

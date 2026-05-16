@@ -1,6 +1,7 @@
 import { MdOutlineViewKanban, MdOutlineDashboard, MdOutlineArchive, MdLogout } from "react-icons/md";
 import { IoMdAddCircleOutline } from "react-icons/io";
-import { FaUserPlus } from "react-icons/fa";
+import { FaUserPlus, FaUsers } from "react-icons/fa";
+
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth";
 import type { Setor } from "../../services/auth";
@@ -33,6 +34,14 @@ const Sidebar = () => {
       to: "/cadastro-usuario",
       allowedSetores: ["ADMIN"],
     },
+
+    {
+      title: "Gerenciar\nUsuários",
+      icon: <FaUsers />,
+      to: "/usuarios",
+      allowedSetores: ["ADMIN"],
+    },
+
   ];
 
   // Filtra links conforme o setor do usuário

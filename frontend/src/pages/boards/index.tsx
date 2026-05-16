@@ -191,8 +191,10 @@ const Boards = () => {
     const { active, over } = event
     if (!over) return
 
-    const sourceColumnId = (active.data.current as { columnId: keyof Columns })?.columnId
-    const targetColumnId = over.id as keyof Columns
+    const sourceColumnId = (active.data.current as { columnId: string })?.columnId
+    const targetColumnId = String(over.id)
+
+
 
     if (!sourceColumnId || !targetColumnId || sourceColumnId === targetColumnId) return
 

@@ -8,7 +8,9 @@ import { PrivateLayout } from "../layout/privateLayout";
 import Login from "../pages/login";
 import Archive from "../pages/archive";
 import RegisterUser from "../pages/register";
+import Users from "../pages/users";
 import { SectorGuard } from "../components/SectorGuard";
+
 
 const routes: RouteObject[] = [
   {
@@ -53,6 +55,15 @@ const routes: RouteObject[] = [
               </SectorGuard>
             ),
           },
+          {
+            path: "usuarios",
+            element: (
+              <SectorGuard allowed={["ADMIN"]}>
+                <Users />
+              </SectorGuard>
+            ),
+          },
+
         ],
       },
       {
