@@ -7,7 +7,7 @@ import categoryRoutes from './routes/categoryRoutes.js';
 import equipmentRoutes from './routes/equipmentRoutes.js';
 import authRoutes from './routes/authRoutes.js';
 import userRoutes from './routes/userRoutes.js';
-
+import dashboardRoutes from './routes/dashboardRoutes.js';
 
 import cookieParser from 'cookie-parser';
 
@@ -40,7 +40,7 @@ app.use('/api/requesters', requesterRoutes);
 app.use('/api/categories', categoryRoutes);
 app.use('/api/equipments', equipmentRoutes);
 app.use('/api/users', userRoutes);
-
+app.use('/api/dashboard', dashboardRoutes);
 
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
