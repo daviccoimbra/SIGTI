@@ -1,21 +1,10 @@
-import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from "react";
+import { useState, useEffect, useCallback, ReactNode } from "react";
 import { authService, type UserData, type Setor, type LoginCredentials } from "../services/auth";
+import { AuthContext } from "./authContextInstance";
 
 type AuthProviderProps = {
   children: ReactNode;
 };
-
-type AuthContextType = {
-  user: UserData | null;
-  loading: boolean;
-  isAuthenticated: boolean;
-  login: (credentials: LoginCredentials) => Promise<void>;
-  logout: () => Promise<void>;
-  /** Verifica se o usuário logado pertence a algum dos setores informados */
-  hasPermission: (...setores: Setor[]) => boolean;
-};
-
-const AuthContext = createContext<AuthContextType | null>(null);
 
 const USER_KEY = "@sigti:user";
 
@@ -78,14 +67,4 @@ export function AuthProvider({ children }: AuthProviderProps) {
       {children}
     </AuthContext.Provider>
   );
-}
-
-export function useAuth() {
-  const context = useContext(AuthContext);
-
-  if (!context) {
-    throw new Error("useAuth deve ser usado dentro do AuthProvider");
-  }
-
-  return context;
 }

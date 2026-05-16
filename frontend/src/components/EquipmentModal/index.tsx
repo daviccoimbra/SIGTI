@@ -2,7 +2,7 @@ import { useEffect } from "react"
 import { useForm } from "react-hook-form"
 import { MdClose } from "react-icons/md"
 import api from "../../services/api"
-import { useToast } from "../../context/toastContext"
+import { useToast } from "../../hooks/useToast"
 
 interface Props {
     isOpen: boolean

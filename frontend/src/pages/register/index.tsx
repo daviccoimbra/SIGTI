@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { IoEyeOff, IoEye } from "react-icons/io5";
+import axios from "axios";
 import {
   MdPersonAdd,
   MdPerson,
@@ -8,9 +9,8 @@ import {
   MdBadge,
   MdLock,
   MdSave,
-  MdCancel,
 } from "react-icons/md";
-import { useToast } from "../../context/toastContext";
+import { useToast } from "../../hooks/useToast";
 import api from "../../services/api";
 import type { Setor } from "../../services/auth";
 
@@ -68,9 +68,11 @@ const RegisterUser = () => {
       showMessage(`Usuário "${novoUsuario.username}" criado com sucesso!`, "success");
       reset();
       setSetorSelecionado(null);
-    } catch (error: any) {
-      const msg =
-        error?.response?.data?.error || "Erro ao cadastrar usuário. Tente novamente.";
+    } catch (error) {
+      let msg = "Erro ao cadastrar usuário. Tente novamente.";
+      if (axios.isAxiosError(error)) {
+        msg = error.response?.data?.error || msg;
+      }
       showMessage(msg, "error");
     } finally {
       setSubmitting(false);

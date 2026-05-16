@@ -1,5 +1,6 @@
-import { useEffect, useRef, useState } from "react";
-import { useToast, Toast } from "../../context/toastContext";
+import { useEffect, useRef, useState, useCallback } from "react";
+import { useToast } from "../../hooks/useToast";
+import { type Toast } from "../../context/toastContextInstance";
 
 export const ToastContainer = () => {
   const { toasts, removeToast } = useToast();
@@ -30,37 +31,39 @@ const ToastCard = ({
 
   const duration = 3000;
 
-  useEffect(() => {
-    // entrada
-    setTimeout(() => setVisible(true), 10);
+  const handleClose = useCallback(() => {
+    setVisible(false);
+    setTimeout(onClose, 300);
+  }, [onClose]);
 
-    startTimer();
+  const startTimer = useCallback(() => {
+    const startTime = Date.now();
 
-    return () => {
-      if (timerRef.current) clearInterval(timerRef.current);
-    };
-  }, []);
-
-  const startTimer = () => {
-    const start = Date.now();
+    if (timerRef.current) clearInterval(timerRef.current);
 
     timerRef.current = setInterval(() => {
-      const elapsed = Date.now() - start;
+      const elapsed = Date.now() - startTime;
       const percent = 100 - (elapsed / duration) * 100;
 
       setProgress(percent);
 
       if (elapsed >= duration) {
-        clearInterval(timerRef.current!);
+        if (timerRef.current) clearInterval(timerRef.current);
         handleClose();
       }
     }, 50);
-  };
+  }, [handleClose]);
 
-  const handleClose = () => {
-    setVisible(false);
-    setTimeout(onClose, 300);
-  };
+  useEffect(() => {
+    // entrada
+    const enterTimer = setTimeout(() => setVisible(true), 10);
+    startTimer();
+
+    return () => {
+      clearTimeout(enterTimer);
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
+  }, [startTimer]);
 
   const handlePause = () => {
     if (timerRef.current) clearInterval(timerRef.current);
@@ -99,14 +102,10 @@ const ToastCard = ({
       </button>
 
       {/* Texto */}
-      <p 
-        className="pr-5">
-        {toast.text}
-      </p>
+      <p className="pr-5">{toast.text}</p>
 
       {/* Barra de progresso */}
-      <div 
-        className="absolute bottom-0 left-0 h-1 bg-white/30 w-full">
+      <div className="absolute bottom-0 left-0 h-1 bg-white/30 w-full">
         <div
           className="h-full bg-white transition-all"
           style={{ width: `${progress}%` }}

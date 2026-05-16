@@ -11,8 +11,8 @@ import {
 
 import type { CommentT, TaskT } from "../../types"
 
-import { useToast } from "../../context/toastContext"
-import { useAuth } from "../../context/authContext"
+import { useToast } from "../../hooks/useToast"
+import { useAuth } from "../../hooks/useAuth"
 import { useTicketMutations } from "../../hooks/useTicketMutations"
 
 type Tab =

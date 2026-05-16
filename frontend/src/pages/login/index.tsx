@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { useNavigate } from "react-router-dom";
-import { useAuth } from "../../context/authContext";
-import { useToast } from "../../context/toastContext";
+import { useAuth } from "../../hooks/useAuth";
+import { useToast } from "../../hooks/useToast";
 import { IoEyeOff, IoEye } from "react-icons/io5";
 import { FiUser } from "react-icons/fi";
+import axios from "axios";
 
 type LoginFormData = {
   login: string;
@@ -25,11 +26,13 @@ export default function Login() {
   const { login, isAuthenticated } = useAuth();
   const navigate = useNavigate();
 
-  // Se já autenticado, redireciona
-  if (isAuthenticated) {
-    navigate("/chamados", { replace: true });
-    return null;
-  }
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate("/chamados", { replace: true });
+    }
+  }, [isAuthenticated, navigate]);
+
+  if (isAuthenticated) return null;
 
   const handleLogin = async (data: LoginFormData) => {
     setSubmitting(true);
@@ -40,9 +43,11 @@ export default function Login() {
       });
       showMessage("Login realizado com sucesso!", "success");
       navigate("/chamados");
-    } catch (error: any) {
-      const msg =
-        error?.response?.data?.error || "Erro ao fazer login. Tente novamente.";
+    } catch (error) {
+      let msg = "Erro ao fazer login. Tente novamente.";
+      if (axios.isAxiosError(error)) {
+        msg = error.response?.data?.error || msg;
+      }
       showMessage(msg, "error");
     } finally {
       setSubmitting(false);

@@ -9,7 +9,6 @@ import {
 } from "@dnd-kit/core"
 
 import {
-  useEffect,
   useMemo,
   useState,
 } from "react"
@@ -24,7 +23,7 @@ import type {
 
 import { useTickets } from "../../hooks/useTickets"
 import { useTicketMutations } from "../../hooks/useTicketMutations"
-import { useAuth } from "../../context/authContext"
+import { useAuth } from "../../hooks/useAuth"
 
 import {
   MdNavigateBefore,
@@ -79,12 +78,6 @@ const COLUMN_CONFIG: Record<string, {
   },
 }
 
-const INITIAL_COLUMNS: Columns = {
-  backlog: { name: "Para Fazer", items: [] },
-  pending: { name: "Em Andamento", items: [] },
-  todo:    { name: "Aguardando Cliente", items: [] },
-}
-
 const PRIORITY_OPTIONS = ["Todos", "Crítica", "Alta", "Média", "Baixa"]
 const SORT_OPTIONS = [
   { value: "date-desc",      label: "Mais recentes" },
@@ -130,7 +123,6 @@ const Boards = () => {
   const CURRENT_USER = user?.username || "Desconhecido"
 
   const [selectedTask, setSelectedTask] = useState<TaskT | null>(null)
-  const [columns, setColumns]           = useState<Columns>(INITIAL_COLUMNS)
   const [filterPriority, setFilterPriority] = useState("Todos")
   const [sortBy, setSortBy]             = useState("date-desc")
   const [search, setSearch]             = useState("")
@@ -169,8 +161,8 @@ const Boards = () => {
     return filtered
   }, [tickets, filterPriority, sortBy, search])
 
-  // sync to columns
-  useEffect(() => {
+  // derived columns state
+  const columns = useMemo(() => {
     const next: Columns = {
       backlog: { name: "Para Fazer", items: [] },
       pending: { name: "Em Andamento", items: [] },
@@ -180,7 +172,7 @@ const Boards = () => {
       const s = t.status as keyof Columns
       if (next[s]) next[s].items.push(t)
     })
-    setColumns(next)
+    return next
   }, [processedTickets])
 
   // keep modal in sync
@@ -214,21 +206,7 @@ const Boards = () => {
       date: new Date().toISOString(),
     }
 
-    setColumns(prev => ({
-      ...prev,
-      [sourceColumnId]: {
-        ...prev[sourceColumnId],
-        items: prev[sourceColumnId].items.filter(i => i.id !== active.id),
-      },
-      [targetColumnId]: {
-        ...prev[targetColumnId],
-        items: [
-          ...prev[targetColumnId].items,
-          { ...card, status: targetColumnId, history: [...(card.history || []), newHistoryItem] },
-        ],
-      },
-    }))
-
+    // Now handled via optimistic update in useTicketMutations
     updateStatus.mutate({ cardId: card.id, targetColumnId, history: newHistoryItem })
   }
 
@@ -370,17 +348,18 @@ const Column = ({ id, column, onOpen }: ColumnProps) => {
 
   const { setNodeRef, isOver } = useDroppable({ id })
 
-  useEffect(() => { setCurrentPage(1) }, [column.items.length])
-
   const totalPages = Math.ceil(column.items.length / itemsPerPage)
+  
+  // Ensure currentPage is always within valid bounds without using useEffect
+  const safeCurrentPage = Math.min(currentPage, Math.max(1, totalPages))
+  
   const currentItems = useMemo(() => {
-    const start = (currentPage - 1) * itemsPerPage
+    const start = (safeCurrentPage - 1) * itemsPerPage
     return column.items.slice(start, start + itemsPerPage)
-  }, [column.items, currentPage])
+  }, [column.items, safeCurrentPage])
 
   return (
     <div className="flex min-w-[350px] max-w-[450px] flex-1 flex-col">
-
 
       {/* Column header */}
       <div className={`mb-3 rounded-2xl bg-gradient-to-r ${cfg.gradient} p-4 shadow-lg`}>
@@ -399,17 +378,17 @@ const Column = ({ id, column, onOpen }: ColumnProps) => {
           <div className="mt-3 flex items-center justify-between rounded-xl bg-white/20 px-2 py-1">
             <button
               onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-              disabled={currentPage === 1}
+              disabled={safeCurrentPage === 1}
               className="rounded-lg p-1 text-white hover:bg-white/20 disabled:opacity-30 transition"
             >
               <MdNavigateBefore size={18} />
             </button>
             <span className="text-xs font-semibold text-white">
-              Página {currentPage} de {totalPages}
+              Página {safeCurrentPage} de {totalPages}
             </span>
             <button
               onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-              disabled={currentPage === totalPages}
+              disabled={safeCurrentPage === totalPages}
               className="rounded-lg p-1 text-white hover:bg-white/20 disabled:opacity-30 transition"
             >
               <MdNavigateNext size={18} />

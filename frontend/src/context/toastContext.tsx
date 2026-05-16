@@ -1,26 +1,5 @@
-import { createContext, useContext, useState, ReactNode } from "react";
-
-export type StatusType = "success" | "error" | "info";
-
-export type Toast = {
-  id: number;
-  text: string;
-  type: StatusType;
-};
-
-type ToastContextType = {
-  showMessage: (text: string, type?: StatusType) => void;
-  removeToast: (id: number) => void;
-  toasts: Toast[];
-};
-
-const ToastContext = createContext<ToastContextType | null>(null);
-
-export const useToast = () => {
-  const context = useContext(ToastContext);
-  if (!context) throw new Error("O comando useToast deve ser usado dentro do provedor.");
-  return context;
-};
+import { useState, ReactNode } from "react";
+import { ToastContext, type StatusType, type Toast } from "./toastContextInstance";
 
 export const ToastProvider = ({ children }: { children: ReactNode }) => {
   const [toasts, setToasts] = useState<Toast[]>([]);

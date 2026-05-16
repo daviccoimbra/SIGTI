@@ -2,7 +2,7 @@ import { MdOutlineViewKanban, MdOutlineDashboard, MdOutlineArchive, MdLogout } f
 import { IoMdAddCircleOutline } from "react-icons/io";
 import { FaUserPlus } from "react-icons/fa";
 import { Link, useNavigate } from "react-router-dom";
-import { useAuth } from "../../context/authContext";
+import { useAuth } from "../../hooks/useAuth";
 import type { Setor } from "../../services/auth";
 
 type NavLink = {

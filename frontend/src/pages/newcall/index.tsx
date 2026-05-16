@@ -1,8 +1,8 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useForm } from "react-hook-form";
+import axios from "axios";
 import {
   MdOutlineFileUpload,
-  MdAddCircleOutline,
   MdTitle,
   MdPerson,
   MdCategory,
@@ -11,15 +11,13 @@ import {
   MdLabel,
   MdPriorityHigh,
   MdSend,
-  MdCancel,
   MdAdd,
-  MdSearch,
   MdKeyboardArrowDown,
 } from "react-icons/md";
 
 import { useNavigate } from "react-router-dom";
 
-import { useToast } from "../../context/toastContext";
+import { useToast } from "../../hooks/useToast";
 
 import { useTicketMutations } from "../../hooks/useTicketMutations";
 import RequesterModal from "../../components/RequesterModal";
@@ -45,10 +43,11 @@ const priorities = [
   { value: "Crítica", label: "Crítica", activeClass: "bg-red-600 text-white border-red-600 shadow-lg shadow-red-200", inactiveClass: "text-red-600 hover:bg-red-50 border-red-200 bg-white" },
 ];
 
+const CLASSIFICATION_OPTIONS = ["Erro", "Dúvida", "Solicitação", "Configuração", "Outros"];
+
 const NewCall = () => {
   const [isDragging, setIsDragging] = useState<boolean>(false);
   const [file, setFile] = useState<File | null>(null);
-  const fileInputRef = useState<HTMLInputElement | null>(null);
   const [isRequesterModalOpen, setIsRequesterModalOpen] = useState(false);
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
   const [isEquipmentModalOpen, setIsEquipmentModalOpen] = useState(false);
@@ -63,9 +62,6 @@ const NewCall = () => {
   const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
   const [showEquipmentDropdown, setShowEquipmentDropdown] = useState(false);
   const [showClassificationDropdown, setShowClassificationDropdown] = useState(false);
-
-  const classificationOptions = ["Erro", "Dúvida", "Solicitação", "Configuração", "Outros"];
-
   const navigate = useNavigate();
   const { showMessage } = useToast();
   const { createTicket } = useTicketMutations();
@@ -139,9 +135,9 @@ const NewCall = () => {
   }, [equipments, equipmentSearch]);
 
   const filteredClassifications = useMemo(() => {
-    if (!classificationSearch.trim()) return classificationOptions;
+    if (!classificationSearch.trim()) return CLASSIFICATION_OPTIONS;
     const search = classificationSearch.toLowerCase();
-    return classificationOptions.filter(opt => opt.toLowerCase().includes(search));
+    return CLASSIFICATION_OPTIONS.filter(opt => opt.toLowerCase().includes(search));
   }, [classificationSearch]);
 
   const {
@@ -179,11 +175,15 @@ const NewCall = () => {
       await createTicket.mutateAsync(formData);
       showMessage("Chamado criado com sucesso!", "success");
       reset();
-      navigate("/boards");
-    } catch (error: unknown) {
+      navigate("/chamados");
+    } catch (error) {
       console.error("Erro ao criar chamado:", error);
-      const err = error as { response?: { data?: { error?: string } }; message?: string };
-      const errorMsg = err.response?.data?.error || err.message || "Erro desconhecido";
+      let errorMsg = "Erro desconhecido";
+      if (axios.isAxiosError(error)) {
+        errorMsg = error.response?.data?.error || error.message;
+      } else if (error instanceof Error) {
+        errorMsg = error.message;
+      }
       showMessage(`Erro ao criar chamado: ${errorMsg}`, "error");
     }
   };
@@ -229,368 +229,368 @@ const NewCall = () => {
       </div>
 
       <div className="p-8">
-<form onSubmit={handleSubmit(onSubmit)} className="max-w-3xl mx-auto">
-            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-              <div className="bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-4">
-                <h2 className="text-white font-semibold text-lg flex items-center gap-2">
-                  <MdTitle className="text-xl" />
-                  Informações do Chamado
-                </h2>
+        <form onSubmit={handleSubmit(onSubmit)} className="max-w-3xl mx-auto">
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+            <div className="bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-4">
+              <h2 className="text-white font-semibold text-lg flex items-center gap-2">
+                <MdTitle className="text-xl" />
+                Informações do Chamado
+              </h2>
+            </div>
+            <div className="p-6 space-y-6">
+              <div className="grid gap-6 md:grid-cols-2">
+                <div className="md:col-span-2">
+                  <label className={`${labelClass} mb-2 block`}>
+                    <MdTitle className="text-indigo-600" />
+                    Título do Chamado *
+                  </label>
+                  <input
+                    className={`${inputClass} ${errors.titulo ? "border-red-400 focus:border-red-400 focus:ring-red-100" : ""}`}
+                    placeholder="Ex: Computador não liga"
+                    disabled={createTicket.isPending}
+                    {...register("titulo", { required: true })}
+                  />
+                  {errors.titulo && <span className="text-red-500 text-xs mt-1">Campo obrigatório!</span>}
+                </div>
+
+                <div className="relative" onClick={(e) => e.stopPropagation()}>
+                  <label className={`${labelClass} mb-2 block`}>
+                    <MdPerson className="text-indigo-600" />
+                    Solicitante *
+                  </label>
+                  <div className="flex gap-2">
+                    <div className="relative flex-1">
+                      <input
+                        type="text"
+                        value={requesterSearch}
+                        onChange={(e) => {
+                          setRequesterSearch(e.target.value);
+                          setShowRequesterDropdown(true);
+                          setValue("requesterId", "", { shouldValidate: true }); // Clear ID if typing
+                        }}
+                        onFocus={() => {
+                          setShowRequesterDropdown(true);
+                          setShowCategoryDropdown(false);
+                          setShowEquipmentDropdown(false);
+                          setShowClassificationDropdown(false);
+                        }}
+                        onClick={() => setShowRequesterDropdown(true)}
+                        className={`${inputClass} w-full ${errors.requesterId ? "border-red-400" : ""}`}
+                        placeholder="Digite para buscar..."
+                      />
+                      <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
+                        <MdKeyboardArrowDown className={`text-gray-400 transition-transform ${showRequesterDropdown ? "rotate-180" : ""}`} />
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setIsRequesterModalOpen(true)}
+                      className="px-3 bg-indigo-50 border border-indigo-200 text-indigo-600 rounded-xl hover:bg-indigo-100 transition-colors flex items-center justify-center shadow-sm"
+                    >
+                      <MdAdd className="text-xl" />
+                    </button>
+                  </div>
+                  {showRequesterDropdown && (
+                    <div className="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-xl shadow-lg max-h-48 overflow-auto animate-fadeIn">
+                      {filteredRequesters.length > 0 ? (
+                        filteredRequesters.map((r) => (
+                          <div
+                            key={r.id}
+                            className="px-4 py-2 hover:bg-indigo-50 cursor-pointer text-sm text-gray-700 border-b border-gray-50 last:border-0"
+                            onClick={() => {
+                              setRequesterSearch(`${r.nome} - ${r.setor}`);
+                              setShowRequesterDropdown(false);
+                              setValue("requesterId", r.id, { shouldValidate: true });
+                            }}
+                          >
+                            <div className="font-medium">{r.nome}</div>
+                            <div className="text-xs text-gray-400">{r.setor}</div>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="px-4 py-3 text-sm text-gray-400 italic">Nenhum resultado encontrado</div>
+                      )}
+                    </div>
+                  )}
+                  <input type="hidden" {...register("requesterId", { required: true })} id="requesterId" />
+                  {errors.requesterId && <span className="text-red-500 text-xs mt-1">Campo obrigatório!</span>}
+                </div>
+
+                <div className="relative" onClick={(e) => e.stopPropagation()}>
+                  <label className={`${labelClass} mb-2 block`}>
+                    <MdCategory className="text-indigo-600" />
+                    Categoria *
+                  </label>
+                  <div className="flex gap-2">
+                    <div className="relative flex-1">
+                      <input
+                        type="text"
+                        value={categorySearch}
+                        onChange={(e) => {
+                          setCategorySearch(e.target.value);
+                          setShowCategoryDropdown(true);
+                          setValue("categoryId", "", { shouldValidate: true }); // Clear ID if typing
+                        }}
+                        onFocus={() => {
+                          setShowCategoryDropdown(true);
+                          setShowRequesterDropdown(false);
+                          setShowEquipmentDropdown(false);
+                          setShowClassificationDropdown(false);
+                        }}
+                        onClick={() => setShowCategoryDropdown(true)}
+                        className={`${inputClass} w-full ${errors.categoryId ? "border-red-400" : ""}`}
+                        placeholder="Digite para buscar..."
+                      />
+                      <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
+                        <MdKeyboardArrowDown className={`text-gray-400 transition-transform ${showCategoryDropdown ? "rotate-180" : ""}`} />
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setIsCategoryModalOpen(true)}
+                      className="px-3 bg-indigo-50 border border-indigo-200 text-indigo-600 rounded-xl hover:bg-indigo-100 transition-colors flex items-center justify-center shadow-sm"
+                    >
+                      <MdAdd className="text-xl" />
+                    </button>
+                  </div>
+                  {showCategoryDropdown && (
+                    <div className="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-xl shadow-lg max-h-48 overflow-auto animate-fadeIn">
+                      {filteredCategories.length > 0 ? (
+                        filteredCategories.map((cat) => (
+                          <div
+                            key={cat.id}
+                            className="px-4 py-3 hover:bg-indigo-50 cursor-pointer text-sm text-gray-700 border-b border-gray-50 last:border-0"
+                            onClick={() => {
+                              setCategorySearch(cat.descricao);
+                              setShowCategoryDropdown(false);
+                              setValue("categoryId", cat.id, { shouldValidate: true });
+                            }}
+                          >
+                            {cat.descricao}
+                          </div>
+                        ))
+                      ) : (
+                        <div className="px-4 py-3 text-sm text-gray-400 italic">Nenhuma categoria encontrada</div>
+                      )}
+                    </div>
+                  )}
+                  <input type="hidden" {...register("categoryId", { required: true })} id="categoryId" />
+                  {errors.categoryId && <span className="text-red-500 text-xs mt-1">Campo obrigatório!</span>}
+                </div>
+
+                <div className="relative" onClick={(e) => e.stopPropagation()}>
+                  <label className={`${labelClass} mb-2 block`}>
+                    <MdComputer className="text-indigo-600" />
+                    Equipamento *
+                  </label>
+                  <div className="flex gap-2">
+                    <div className="relative flex-1">
+                      <input
+                        type="text"
+                        value={equipmentSearch}
+                        onChange={(e) => {
+                          setEquipmentSearch(e.target.value);
+                          setShowEquipmentDropdown(true);
+                          setValue("equipmentId", "", { shouldValidate: true }); // Clear ID if typing
+                        }}
+                        onFocus={() => {
+                          setShowEquipmentDropdown(true);
+                          setShowRequesterDropdown(false);
+                          setShowCategoryDropdown(false);
+                          setShowClassificationDropdown(false);
+                        }}
+                        onClick={() => setShowEquipmentDropdown(true)}
+                        className={`${inputClass} w-full ${errors.equipmentId ? "border-red-400" : ""}`}
+                        placeholder="Digite para buscar..."
+                      />
+                      <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
+                        <MdKeyboardArrowDown className={`text-gray-400 transition-transform ${showEquipmentDropdown ? "rotate-180" : ""}`} />
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setIsEquipmentModalOpen(true)}
+                      className="px-3 bg-indigo-50 border border-indigo-200 text-indigo-600 rounded-xl hover:bg-indigo-100 transition-colors flex items-center justify-center shadow-sm"
+                    >
+                      <MdAdd className="text-xl" />
+                    </button>
+                  </div>
+                  {showEquipmentDropdown && (
+                    <div className="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-xl shadow-lg max-h-48 overflow-auto animate-fadeIn">
+                      {filteredEquipments.length > 0 ? (
+                        filteredEquipments.map((eq) => (
+                          <div
+                            key={eq.id}
+                            className="px-4 py-2 hover:bg-indigo-50 cursor-pointer text-sm text-gray-700 border-b border-gray-50 last:border-0"
+                            onClick={() => {
+                              setEquipmentSearch(`${eq.nome} - ${eq.marcaModelo}`);
+                              setShowEquipmentDropdown(false);
+                              setValue("equipmentId", eq.id, { shouldValidate: true });
+                            }}
+                          >
+                            <div className="font-medium">{eq.nome}</div>
+                            <div className="text-xs text-gray-400">{eq.marcaModelo}</div>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="px-4 py-3 text-sm text-gray-400 italic">Nenhum equipamento encontrado</div>
+                      )}
+                    </div>
+                  )}
+                  <input type="hidden" {...register("equipmentId", { required: true })} id="equipmentId" />
+                  {errors.equipmentId && <span className="text-red-500 text-xs mt-1">Campo obrigatório!</span>}
+                </div>
+
+                <div className="relative" onClick={(e) => e.stopPropagation()}>
+                  <label className={`${labelClass} mb-2 block`}>
+                    <MdLabel className="text-indigo-600" />
+                    Classificação *
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={classificationSearch}
+                      onChange={(e) => {
+                        setClassificationSearch(e.target.value);
+                        setShowClassificationDropdown(true);
+                        setValue("classificacao", "", { shouldValidate: true }); // Clear value if typing
+                      }}
+                      onFocus={() => {
+                        setShowClassificationDropdown(true);
+                        setShowRequesterDropdown(false);
+                        setShowCategoryDropdown(false);
+                        setShowEquipmentDropdown(false);
+                      }}
+                      onClick={() => setShowClassificationDropdown(true)}
+                      className={`${inputClass} w-full ${errors.classificacao ? "border-red-400" : ""}`}
+                      placeholder="Selecione ou digite..."
+                    />
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
+                      <MdKeyboardArrowDown className={`text-gray-400 transition-transform ${showClassificationDropdown ? "rotate-180" : ""}`} />
+                    </div>
+                  </div>
+                  {showClassificationDropdown && (
+                    <div className="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-xl shadow-lg max-h-48 overflow-auto animate-fadeIn">
+                      {filteredClassifications.length > 0 ? (
+                        filteredClassifications.map((opt) => (
+                          <div
+                            key={opt}
+                            className="px-4 py-3 hover:bg-indigo-50 cursor-pointer text-sm text-gray-700 border-b border-gray-50 last:border-0"
+                            onClick={() => {
+                              setClassificationSearch(opt);
+                              setShowClassificationDropdown(false);
+                              setValue("classificacao", opt, { shouldValidate: true });
+                            }}
+                          >
+                            {opt}
+                          </div>
+                        ))
+                      ) : (
+                        <div className="px-4 py-3 text-sm text-gray-400 italic">Nenhum resultado</div>
+                      )}
+                    </div>
+                  )}
+                  <input type="hidden" {...register("classificacao", { required: true })} id="classificacao" />
+                  {errors.classificacao && <span className="text-red-500 text-xs mt-1">Campo obrigatório!</span>}
+                </div>
               </div>
-              <div className="p-6 space-y-6">
-            <div className="grid gap-6 md:grid-cols-2">
-              <div className="md:col-span-2">
+
+              <div>
                 <label className={`${labelClass} mb-2 block`}>
-                  <MdTitle className="text-indigo-600" />
-                  Título do Chamado *
+                  <MdDescription className="text-indigo-600" />
+                  Descrição *
+                </label>
+                <textarea
+                  className={`${inputClass} min-h-[120px] resize-y ${errors.descricao ? "border-red-400" : ""}`}
+                  placeholder="Descreva o problema com o máximo de detalhes possível..."
+                  disabled={createTicket.isPending}
+                  {...register("descricao", { required: true })}
+                />
+                {errors.descricao && <span className="text-red-500 text-xs mt-1">Campo obrigatório!</span>}
+              </div>
+
+              <div>
+                <label className={`${labelClass} mb-3 block`}>
+                  <MdPriorityHigh className="text-indigo-600" />
+                  Prioridade *
+                </label>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  {priorities.map((p) => (
+                    <label
+                      key={p.value}
+                      className={`cursor-pointer rounded-xl border-2 px-4 py-3 text-sm font-bold transition-all duration-200 text-center
+                        ${selectedPriority === p.value ? p.activeClass : p.inactiveClass}
+                      `}
+                    >
+                      <input
+                        type="radio"
+                        value={p.value}
+                        className="sr-only"
+                        {...register("prioridade", { required: true })}
+                      />
+                      {p.label}
+                    </label>
+                  ))}
+                </div>
+                {errors.prioridade && <span className="text-red-500 text-xs mt-2">Campo obrigatório!</span>}
+              </div>
+
+              <div>
+                <label className={`${labelClass} mb-2 block`}>
+                  <MdOutlineFileUpload className="text-indigo-600" />
+                  Anexo (opcional)
+                </label>
+                <label
+                  htmlFor="fileInput"
+                  onDrop={handleDrop}
+                  onDragOver={handleDragOver}
+                  onDragLeave={handleDragLeave}
+                  className={`flex flex-col items-center justify-center py-6 border-2 border-dashed rounded-xl cursor-pointer transition-all duration-200
+                    ${isDragging ? "border-blue-400 bg-blue-50" : file ? "border-gray-300 bg-gray-50" : "border-gray-200 hover:border-gray-300 hover:bg-gray-50"}
+                  `}
+                >
+                  {file ? (
+                    <>
+                      <p className="text-gray-700 font-medium text-sm">{file.name}</p>
+                      <p className="text-gray-400 text-xs mt-1">Clique para trocar o arquivo</p>
+                    </>
+                  ) : (
+                    <>
+                      <MdOutlineFileUpload size={32} className="text-gray-400 mb-2" />
+                      <p className="text-gray-500 text-sm">Arraste e solte ou clique para selecionar</p>
+                      <p className="text-gray-400 text-xs mt-1">PDF, imagens (PNG, JPG)</p>
+                    </>
+                  )}
                 </label>
                 <input
-                  className={`${inputClass} ${errors.titulo ? "border-red-400 focus:border-red-400 focus:ring-red-100" : ""}`}
-                  placeholder="Ex: Computador não liga"
-                  disabled={createTicket.isPending}
-                  {...register("titulo", { required: true })}
+                  id="fileInput"
+                  type="file"
+                  className="hidden"
+                  accept="image/*,.pdf"
+                  onChange={handleFileChange}
                 />
-                {errors.titulo && <span className="text-red-500 text-xs mt-1">Campo obrigatório!</span>}
-              </div>
-
-              <div className="relative" onClick={(e) => e.stopPropagation()}>
-                <label className={`${labelClass} mb-2 block`}>
-                  <MdPerson className="text-indigo-600" />
-                  Solicitante *
-                </label>
-                <div className="flex gap-2">
-                  <div className="relative flex-1">
-                    <input
-                      type="text"
-                      value={requesterSearch}
-                      onChange={(e) => {
-                        setRequesterSearch(e.target.value);
-                        setShowRequesterDropdown(true);
-                        setValue("requesterId", ""); // Clear ID if typing
-                      }}
-                      onFocus={() => {
-                        setShowRequesterDropdown(true);
-                        setShowCategoryDropdown(false);
-                        setShowEquipmentDropdown(false);
-                        setShowClassificationDropdown(false);
-                      }}
-                      onClick={() => setShowRequesterDropdown(true)}
-                      className={`${inputClass} w-full ${errors.requesterId ? "border-red-400" : ""}`}
-                      placeholder="Digite para buscar..."
-                    />
-                    <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
-                      <MdKeyboardArrowDown className={`text-gray-400 transition-transform ${showRequesterDropdown ? "rotate-180" : ""}`} />
-                    </div>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setIsRequesterModalOpen(true)}
-                    className="px-3 bg-indigo-50 border border-indigo-200 text-indigo-600 rounded-xl hover:bg-indigo-100 transition-colors flex items-center justify-center shadow-sm"
-                  >
-                    <MdAdd className="text-xl" />
-                  </button>
-                </div>
-                {showRequesterDropdown && (
-                  <div className="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-xl shadow-lg max-h-48 overflow-auto animate-fadeIn">
-                    {filteredRequesters.length > 0 ? (
-                      filteredRequesters.map((r) => (
-                        <div
-                          key={r.id}
-                          className="px-4 py-2 hover:bg-indigo-50 cursor-pointer text-sm text-gray-700 border-b border-gray-50 last:border-0"
-                          onClick={() => {
-                            setRequesterSearch(`${r.nome} - ${r.setor}`);
-                            setShowRequesterDropdown(false);
-                            setValue("requesterId", r.id);
-                          }}
-                        >
-                          <div className="font-medium">{r.nome}</div>
-                          <div className="text-xs text-gray-400">{r.setor}</div>
-                        </div>
-                      ))
-                    ) : (
-                      <div className="px-4 py-3 text-sm text-gray-400 italic">Nenhum resultado encontrado</div>
-                    )}
-                  </div>
-                )}
-                <input type="hidden" {...register("requesterId", { required: true })} id="requesterId" />
-                {errors.requesterId && <span className="text-red-500 text-xs mt-1">Campo obrigatório!</span>}
-              </div>
-
-              <div className="relative" onClick={(e) => e.stopPropagation()}>
-                <label className={`${labelClass} mb-2 block`}>
-                  <MdCategory className="text-indigo-600" />
-                  Categoria *
-                </label>
-                <div className="flex gap-2">
-                  <div className="relative flex-1">
-                    <input
-                      type="text"
-                      value={categorySearch}
-                      onChange={(e) => {
-                        setCategorySearch(e.target.value);
-                        setShowCategoryDropdown(true);
-                        setValue("categoryId", ""); // Clear ID if typing
-                      }}
-                      onFocus={() => {
-                        setShowCategoryDropdown(true);
-                        setShowRequesterDropdown(false);
-                        setShowEquipmentDropdown(false);
-                        setShowClassificationDropdown(false);
-                      }}
-                      onClick={() => setShowCategoryDropdown(true)}
-                      className={`${inputClass} w-full ${errors.categoryId ? "border-red-400" : ""}`}
-                      placeholder="Digite para buscar..."
-                    />
-                    <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
-                      <MdKeyboardArrowDown className={`text-gray-400 transition-transform ${showCategoryDropdown ? "rotate-180" : ""}`} />
-                    </div>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setIsCategoryModalOpen(true)}
-                    className="px-3 bg-indigo-50 border border-indigo-200 text-indigo-600 rounded-xl hover:bg-indigo-100 transition-colors flex items-center justify-center shadow-sm"
-                  >
-                    <MdAdd className="text-xl" />
-                  </button>
-                </div>
-                {showCategoryDropdown && (
-                  <div className="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-xl shadow-lg max-h-48 overflow-auto animate-fadeIn">
-                    {filteredCategories.length > 0 ? (
-                      filteredCategories.map((cat) => (
-                        <div
-                          key={cat.id}
-                          className="px-4 py-3 hover:bg-indigo-50 cursor-pointer text-sm text-gray-700 border-b border-gray-50 last:border-0"
-                          onClick={() => {
-                            setCategorySearch(cat.descricao);
-                            setShowCategoryDropdown(false);
-                            setValue("categoryId", cat.id);
-                          }}
-                        >
-                          {cat.descricao}
-                        </div>
-                      ))
-                    ) : (
-                      <div className="px-4 py-3 text-sm text-gray-400 italic">Nenhuma categoria encontrada</div>
-                    )}
-                  </div>
-                )}
-                <input type="hidden" {...register("categoryId", { required: true })} id="categoryId" />
-                {errors.categoryId && <span className="text-red-500 text-xs mt-1">Campo obrigatório!</span>}
-              </div>
-
-              <div className="relative" onClick={(e) => e.stopPropagation()}>
-                <label className={`${labelClass} mb-2 block`}>
-                  <MdComputer className="text-indigo-600" />
-                  Equipamento *
-                </label>
-                <div className="flex gap-2">
-                  <div className="relative flex-1">
-                    <input
-                      type="text"
-                      value={equipmentSearch}
-                      onChange={(e) => {
-                        setEquipmentSearch(e.target.value);
-                        setShowEquipmentDropdown(true);
-                        setValue("equipmentId", ""); // Clear ID if typing
-                      }}
-                      onFocus={() => {
-                        setShowEquipmentDropdown(true);
-                        setShowRequesterDropdown(false);
-                        setShowCategoryDropdown(false);
-                        setShowClassificationDropdown(false);
-                      }}
-                      onClick={() => setShowEquipmentDropdown(true)}
-                      className={`${inputClass} w-full ${errors.equipmentId ? "border-red-400" : ""}`}
-                      placeholder="Digite para buscar..."
-                    />
-                    <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
-                      <MdKeyboardArrowDown className={`text-gray-400 transition-transform ${showEquipmentDropdown ? "rotate-180" : ""}`} />
-                    </div>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setIsEquipmentModalOpen(true)}
-                    className="px-3 bg-indigo-50 border border-indigo-200 text-indigo-600 rounded-xl hover:bg-indigo-100 transition-colors flex items-center justify-center shadow-sm"
-                  >
-                    <MdAdd className="text-xl" />
-                  </button>
-                </div>
-                {showEquipmentDropdown && (
-                  <div className="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-xl shadow-lg max-h-48 overflow-auto animate-fadeIn">
-                    {filteredEquipments.length > 0 ? (
-                      filteredEquipments.map((eq) => (
-                        <div
-                          key={eq.id}
-                          className="px-4 py-2 hover:bg-indigo-50 cursor-pointer text-sm text-gray-700 border-b border-gray-50 last:border-0"
-                          onClick={() => {
-                            setEquipmentSearch(`${eq.nome} - ${eq.marcaModelo}`);
-                            setShowEquipmentDropdown(false);
-                            setValue("equipmentId", eq.id);
-                          }}
-                        >
-                          <div className="font-medium">{eq.nome}</div>
-                          <div className="text-xs text-gray-400">{eq.marcaModelo}</div>
-                        </div>
-                      ))
-                    ) : (
-                      <div className="px-4 py-3 text-sm text-gray-400 italic">Nenhum equipamento encontrado</div>
-                    )}
-                  </div>
-                )}
-                <input type="hidden" {...register("equipmentId", { required: true })} id="equipmentId" />
-                {errors.equipmentId && <span className="text-red-500 text-xs mt-1">Campo obrigatório!</span>}
-              </div>
-
-              <div className="relative" onClick={(e) => e.stopPropagation()}>
-                <label className={`${labelClass} mb-2 block`}>
-                  <MdLabel className="text-indigo-600" />
-                  Classificação *
-                </label>
-                <div className="relative">
-                  <input
-                    type="text"
-                    value={classificationSearch}
-                    onChange={(e) => {
-                      setClassificationSearch(e.target.value);
-                      setShowClassificationDropdown(true);
-                      setValue("classificacao", ""); // Clear value if typing
-                    }}
-                    onFocus={() => {
-                      setShowClassificationDropdown(true);
-                      setShowRequesterDropdown(false);
-                      setShowCategoryDropdown(false);
-                      setShowEquipmentDropdown(false);
-                    }}
-                    onClick={() => setShowClassificationDropdown(true)}
-                    className={`${inputClass} w-full ${errors.classificacao ? "border-red-400" : ""}`}
-                    placeholder="Selecione ou digite..."
-                  />
-                  <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
-                    <MdKeyboardArrowDown className={`text-gray-400 transition-transform ${showClassificationDropdown ? "rotate-180" : ""}`} />
-                  </div>
-                </div>
-                {showClassificationDropdown && (
-                  <div className="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-xl shadow-lg max-h-48 overflow-auto animate-fadeIn">
-                    {filteredClassifications.length > 0 ? (
-                      filteredClassifications.map((opt) => (
-                        <div
-                          key={opt}
-                          className="px-4 py-3 hover:bg-indigo-50 cursor-pointer text-sm text-gray-700 border-b border-gray-50 last:border-0"
-                          onClick={() => {
-                            setClassificationSearch(opt);
-                            setShowClassificationDropdown(false);
-                            setValue("classificacao", opt);
-                          }}
-                        >
-                          {opt}
-                        </div>
-                      ))
-                    ) : (
-                      <div className="px-4 py-3 text-sm text-gray-400 italic">Nenhum resultado</div>
-                    )}
-                  </div>
-                )}
-                <input type="hidden" {...register("classificacao", { required: true })} id="classificacao" />
-                {errors.classificacao && <span className="text-red-500 text-xs mt-1">Campo obrigatório!</span>}
               </div>
             </div>
-
-            <div>
-              <label className={`${labelClass} mb-2 block`}>
-                <MdDescription className="text-indigo-600" />
-                Descrição *
-              </label>
-              <textarea
-                className={`${inputClass} min-h-[120px] resize-y ${errors.descricao ? "border-red-400" : ""}`}
-                placeholder="Descreva o problema com o máximo de detalhes possível..."
-                disabled={createTicket.isPending}
-                {...register("descricao", { required: true })}
-              />
-              {errors.descricao && <span className="text-red-500 text-xs mt-1">Campo obrigatório!</span>}
             </div>
 
-            <div>
-              <label className={`${labelClass} mb-3 block`}>
-                <MdPriorityHigh className="text-indigo-600" />
-                Prioridade *
-              </label>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                {priorities.map((p) => (
-                  <label
-                    key={p.value}
-                    className={`cursor-pointer rounded-xl border-2 px-4 py-3 text-sm font-bold transition-all duration-200 text-center
-                      ${selectedPriority === p.value ? p.activeClass : p.inactiveClass}
-                    `}
-                  >
-                    <input
-                      type="radio"
-                      value={p.value}
-                      className="sr-only"
-                      {...register("prioridade", { required: true })}
-                    />
-                    {p.label}
-                  </label>
-                ))}
-              </div>
-              {errors.prioridade && <span className="text-red-500 text-xs mt-2">Campo obrigatório!</span>}
-            </div>
-
-            <div>
-              <label className={`${labelClass} mb-2 block`}>
-                <MdOutlineFileUpload className="text-indigo-600" />
-                Anexo (opcional)
-              </label>
-              <label
-                htmlFor="fileInput"
-                onDrop={handleDrop}
-                onDragOver={handleDragOver}
-                onDragLeave={handleDragLeave}
-                className={`flex flex-col items-center justify-center py-6 border-2 border-dashed rounded-xl cursor-pointer transition-all duration-200
-                  ${isDragging ? "border-blue-400 bg-blue-50" : file ? "border-gray-300 bg-gray-50" : "border-gray-200 hover:border-gray-300 hover:bg-gray-50"}
-                `}
+            <div className="flex justify-end gap-3 mt-6">
+              <button
+                type="button"
+                onClick={() => reset()}
+                className="px-6 py-3 bg-gray-100 text-gray-600 rounded-xl font-medium text-sm hover:bg-gray-200 transition-colors border border-gray-200 shadow-sm"
               >
-                {file ? (
-                  <>
-                    <p className="text-gray-700 font-medium text-sm">{file.name}</p>
-                    <p className="text-gray-400 text-xs mt-1">Clique para trocar o arquivo</p>
-                  </>
-                ) : (
-                  <>
-                    <MdOutlineFileUpload size={32} className="text-gray-400 mb-2" />
-                    <p className="text-gray-500 text-sm">Arraste e solte ou clique para selecionar</p>
-                    <p className="text-gray-400 text-xs mt-1">PDF, imagens (PNG, JPG)</p>
-                  </>
-                )}
-              </label>
-              <input
-                id="fileInput"
-                type="file"
-                className="hidden"
-                accept="image/*,.pdf"
-                onChange={handleFileChange}
-              />
+                Cancelar
+              </button>
+              <button
+                type="submit"
+                disabled={createTicket.isPending}
+                className="px-8 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl font-medium text-sm hover:from-blue-700 hover:to-indigo-700 transition-all shadow-lg shadow-indigo-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              >
+                <MdSend className="text-lg" />
+                {createTicket.isPending ? "Criando..." : "Criar Chamado"}
+              </button>
             </div>
-          </div>
-          </div>
-
-          <div className="flex justify-end gap-3 mt-6">
-            <button
-              type="button"
-              onClick={() => reset()}
-              className="px-6 py-3 bg-gray-100 text-gray-600 rounded-xl font-medium text-sm hover:bg-gray-200 transition-colors border border-gray-200 shadow-sm"
-            >
-              Cancelar
-            </button>
-            <button
-              type="submit"
-              disabled={createTicket.isPending}
-              className="px-8 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl font-medium text-sm hover:from-blue-700 hover:to-indigo-700 transition-all shadow-lg shadow-indigo-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-            >
-              <MdSend className="text-lg" />
-              {createTicket.isPending ? "Criando..." : "Criar Chamado"}
-            </button>
-          </div>
-        </form>
+          </form>
       </div>
 
       <RequesterModal

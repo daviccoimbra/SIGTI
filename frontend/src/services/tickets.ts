@@ -12,7 +12,10 @@ type Payload = {
     protocolo: string
     solicitante: string
     departamento: string
-}
+    categoryId?: string
+    equipmentId?: string
+    requesterId?: string
+} | FormData
 
 export const ticketsService = {
     newTicket: async (payload: Payload) => {
