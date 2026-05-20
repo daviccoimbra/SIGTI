@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, ReactNode } from "react";
+import { useState, useEffect, useCallback, type ReactNode } from "react";
 import { authService, type UserData, type Setor, type LoginCredentials } from "../services/auth";
 import { AuthContext } from "./authContextInstance";
 

@@ -1,5 +1,6 @@
 import { MdWarning } from 'react-icons/md';
-import { TicketData } from '../../../services/dashboard';
+import { Skeleton } from '../../../components/Skeleton';
+import type { TicketData } from '../../../services/dashboard';
 
 interface PriorityAlertsProps {
   tickets: TicketData[];
@@ -15,10 +16,20 @@ export function PriorityAlerts({ tickets, isLoading }: PriorityAlertsProps) {
   if (isLoading) {
     return (
       <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
-        <h3 className="text-lg font-semibold text-gray-800 mb-4">Alertas de Prioridade</h3>
-        <div className="animate-pulse space-y-3">
+        <div className="flex items-center gap-2 mb-4">
+          <Skeleton variant="circular" className="w-5 h-5" />
+          <Skeleton className="h-5 w-36" />
+        </div>
+        <div className="space-y-3">
           {[...Array(3)].map((_, i) => (
-            <div key={i} className="h-16 bg-gray-200 rounded"></div>
+            <div key={i} className="p-3 border border-slate-100 rounded-lg space-y-2">
+              <div className="flex items-center gap-2">
+                <Skeleton className="h-3 w-16" />
+                <Skeleton className="h-4 w-14" />
+              </div>
+              <Skeleton className="h-4 w-full" />
+              <Skeleton className="h-3 w-2/3" />
+            </div>
           ))}
         </div>
       </div>

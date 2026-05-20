@@ -275,12 +275,12 @@ const TaskModal = ({
 
                 {/* TABS */}
                 <div className="mb-4 flex gap-4 border-b">
-                    {[
+                    {([
                         "detalhes",
                         "comentarios",
                         "historico",
-                        ...(task.anexo ? ["anexos" as Tab] : []),
-                    ].map((item) => (
+                        ...(task.anexo ? ["anexos"] : []),
+                    ] as Tab[]).map((item) => (
                         <button
                             key={item}
                             onClick={() =>

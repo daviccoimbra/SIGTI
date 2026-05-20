@@ -1,4 +1,4 @@
-import { useState, ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { ToastContext, type StatusType, type Toast } from "./toastContextInstance";
 
 export const ToastProvider = ({ children }: { children: ReactNode }) => {

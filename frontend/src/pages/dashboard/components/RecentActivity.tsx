@@ -1,4 +1,4 @@
-import { TicketData } from '../../../services/dashboard';
+import type { TicketData } from '../../../services/dashboard';
 
 interface RecentActivityProps {
   tickets: TicketData[];

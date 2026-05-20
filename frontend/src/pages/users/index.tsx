@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react"
-import { MdSearch, MdEdit, MdDelete, MdPerson, MdEmail, MdBusiness, MdBadge, MdAdminPanelSettings, MdSecurity } from "react-icons/md"
+import { MdSearch, MdEdit, MdDelete, MdPerson, MdEmail, MdBusiness, MdBadge, MdSecurity } from "react-icons/md"
 import { getUsers, deleteUser } from "../../services/users"
 
 import type { UserT } from "../../types"
@@ -74,42 +74,45 @@ const Users = () => {
 
 
   return (
-    <div className="flex flex-col bg-gray-50 min-h-full p-8">
+    <div className="flex flex-col bg-slate-50 min-h-full p-8">
       {/* Header */}
       <div className="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight">
+          <h1 
+            className="text-3xl font-bold text-slate-800 tracking-tight"
+            style={{ fontFamily: 'var(--font-display)' }}
+          >
             Gestão de Usuários
           </h1>
-          <p className="text-gray-500 mt-1">
+          <p className="text-slate-500 mt-1 font-medium">
             Pesquise, visualize e edite os usuários cadastrados no sistema.
           </p>
         </div>
 
-        <div className="relative w-full md:w-96">
-          <MdSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={22} />
+        <div className="relative w-full md:w-96 group">
+          <MdSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-[#1e3988] transition-colors" size={22} />
           <input
             type="text"
             placeholder="Buscar por nome..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-12 pr-4 py-3 bg-white border border-gray-200 rounded-2xl shadow-sm focus:ring-4 focus:ring-blue-100 focus:border-blue-500 outline-none transition-all text-gray-700"
+            className="w-full pl-12 pr-4 py-3 bg-white/80 border border-slate-200 rounded-2xl shadow-sm focus:ring-4 focus:ring-[#1e3988]/10 focus:border-[#1e3988] outline-none transition-all text-slate-700 backdrop-blur-sm"
           />
         </div>
       </div>
 
       {/* Users List */}
-      <div className="bg-white rounded-3xl shadow-xl shadow-gray-200/50 border border-gray-100 overflow-hidden">
+      <div className="bg-white/80 backdrop-blur-xl rounded-3xl shadow-xl shadow-slate-200/50 border border-slate-200/50 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="bg-gray-50/50 border-b border-gray-100">
-                <th className="px-6 py-5 text-xs font-bold text-gray-400 uppercase tracking-widest">Usuário</th>
-                <th className="px-6 py-5 text-xs font-bold text-gray-400 uppercase tracking-widest">Contato / Depto</th>
-                <th className="px-6 py-5 text-xs font-bold text-gray-400 uppercase tracking-widest">Cargo</th>
-                <th className="px-6 py-5 text-xs font-bold text-gray-400 uppercase tracking-widest">Setor</th>
-                <th className="px-6 py-5 text-xs font-bold text-gray-400 uppercase tracking-widest">Status</th>
-                <th className="px-6 py-5 text-xs font-bold text-gray-400 uppercase tracking-widest text-right">Ações</th>
+              <tr className="bg-slate-50/50 border-b border-slate-100">
+                <th className="px-6 py-5 text-xs font-bold text-slate-400 uppercase tracking-widest" style={{ fontFamily: 'var(--font-display)' }}>Usuário</th>
+                <th className="px-6 py-5 text-xs font-bold text-slate-400 uppercase tracking-widest" style={{ fontFamily: 'var(--font-display)' }}>Contato / Depto</th>
+                <th className="px-6 py-5 text-xs font-bold text-slate-400 uppercase tracking-widest" style={{ fontFamily: 'var(--font-display)' }}>Cargo</th>
+                <th className="px-6 py-5 text-xs font-bold text-slate-400 uppercase tracking-widest" style={{ fontFamily: 'var(--font-display)' }}>Setor</th>
+                <th className="px-6 py-5 text-xs font-bold text-slate-400 uppercase tracking-widest" style={{ fontFamily: 'var(--font-display)' }}>Status</th>
+                <th className="px-6 py-5 text-xs font-bold text-slate-400 uppercase tracking-widest text-right" style={{ fontFamily: 'var(--font-display)' }}>Ações</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
@@ -117,22 +120,22 @@ const Users = () => {
                 <tr>
                   <td colSpan={6} className="px-6 py-20 text-center">
                     <div className="flex flex-col items-center gap-3">
-                      <div className="w-10 h-10 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
-                      <p className="text-gray-400 font-medium italic">Carregando usuários...</p>
+                      <div className="w-10 h-10 border-4 border-[#1e3988] border-t-transparent rounded-full animate-spin" />
+                      <p className="text-slate-400 font-medium italic">Carregando usuários...</p>
                     </div>
                   </td>
                 </tr>
               ) : users.length > 0 ? (
                 users.map((user) => (
-                  <tr key={user.id} className="hover:bg-blue-50/30 transition-colors group">
+                  <tr key={user.id} className="hover:bg-[#1e3988]/5 transition-colors group">
                     <td className="px-6 py-5">
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-100 to-indigo-100 flex items-center justify-center text-blue-600 font-bold border border-blue-200 shadow-sm">
+                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#1e3988]/10 to-[#2563eb]/10 flex items-center justify-center text-[#1e3988] font-bold border border-[#1e3988]/20 shadow-sm">
                           {user.nome.charAt(0).toUpperCase()}
                         </div>
                         <div>
-                          <p className="font-bold text-gray-800 group-hover:text-blue-700 transition-colors">{user.nome}</p>
-                          <p className="text-xs text-gray-400 font-medium">@{user.username}</p>
+                          <p className="font-bold text-slate-800 group-hover:text-[#1e3988] transition-colors">{user.nome}</p>
+                          <p className="text-xs text-slate-400 font-medium">@{user.username}</p>
                         </div>
                       </div>
                     </td>

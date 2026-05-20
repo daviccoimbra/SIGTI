@@ -207,21 +207,24 @@ const NewCall = () => {
     if (selectedFile) setFile(selectedFile);
   };
 
-  const inputClass = "w-full px-4 py-3 rounded-xl border border-gray-200 bg-white text-gray-700 text-sm focus:border-indigo-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-100 transition shadow-sm";
-  const labelClass = "text-sm font-semibold text-gray-700 flex items-center gap-2";
+  const inputClass = "w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50/50 text-slate-700 text-sm focus:border-[#1e3988] focus:bg-white focus:outline-none focus:ring-4 focus:ring-[#1e3988]/10 transition shadow-sm";
+  const labelClass = "text-sm font-semibold text-slate-700 flex items-center gap-2";
 
   return (
-    <div className="flex flex-col bg-gray-50 min-h-full">
-      <div className="flex-shrink-0 bg-white border-b border-gray-100 px-8 pt-7 pb-5 shadow-sm">
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-blue-600 to-indigo-700 shadow-lg shadow-blue-200">
-            <MdTitle className="text-white" size={22} />
+    <div className="flex flex-col bg-slate-50 min-h-full">
+      <div className="flex-shrink-0 bg-white/80 backdrop-blur-xl border-b border-slate-200/50 px-8 pt-7 pb-5 shadow-sm">
+        <div className="flex items-center gap-4">
+          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-[#1e3988] to-[#2563eb] shadow-lg shadow-blue-500/20">
+            <MdTitle className="text-white" size={24} />
           </div>
           <div>
-            <h1 className="text-xl font-bold text-gray-900 leading-tight">
+            <h1 
+              className="text-xl font-bold text-slate-800 leading-tight"
+              style={{ fontFamily: 'var(--font-display)' }}
+            >
               Novo Chamado
             </h1>
-            <p className="text-xs text-gray-500 mt-0.5">
+            <p className="text-xs text-slate-500 mt-0.5 font-medium">
               Preencha os dados abaixo para abrir um novo ticket
             </p>
           </div>
@@ -230,9 +233,12 @@ const NewCall = () => {
 
       <div className="p-8">
         <form onSubmit={handleSubmit(onSubmit)} className="max-w-3xl mx-auto">
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-            <div className="bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-4">
-              <h2 className="text-white font-semibold text-lg flex items-center gap-2">
+          <div className="bg-white/80 backdrop-blur-xl rounded-2xl border border-slate-200/50 shadow-sm overflow-hidden">
+            <div className="bg-gradient-to-r from-[#1e3988] to-[#2563eb] px-6 py-4">
+              <h2 
+                className="text-white font-semibold text-lg flex items-center gap-2"
+                style={{ fontFamily: 'var(--font-display)' }}
+              >
                 <MdTitle className="text-xl" />
                 Informações do Chamado
               </h2>
@@ -241,7 +247,7 @@ const NewCall = () => {
               <div className="grid gap-6 md:grid-cols-2">
                 <div className="md:col-span-2">
                   <label className={`${labelClass} mb-2 block`}>
-                    <MdTitle className="text-indigo-600" />
+                    <MdTitle className="text-[#1e3988]" />
                     Título do Chamado *
                   </label>
                   <input
@@ -255,7 +261,7 @@ const NewCall = () => {
 
                 <div className="relative" onClick={(e) => e.stopPropagation()}>
                   <label className={`${labelClass} mb-2 block`}>
-                    <MdPerson className="text-indigo-600" />
+                    <MdPerson className="text-[#1e3988]" />
                     Solicitante *
                   </label>
                   <div className="flex gap-2">
@@ -285,7 +291,7 @@ const NewCall = () => {
                     <button
                       type="button"
                       onClick={() => setIsRequesterModalOpen(true)}
-                      className="px-3 bg-indigo-50 border border-indigo-200 text-indigo-600 rounded-xl hover:bg-indigo-100 transition-colors flex items-center justify-center shadow-sm"
+                      className="px-3 bg-[#1e3988]/5 border border-[#1e3988]/20 text-[#1e3988] rounded-xl hover:bg-[#1e3988]/10 transition-colors flex items-center justify-center shadow-sm"
                     >
                       <MdAdd className="text-xl" />
                     </button>
@@ -296,7 +302,7 @@ const NewCall = () => {
                         filteredRequesters.map((r) => (
                           <div
                             key={r.id}
-                            className="px-4 py-2 hover:bg-indigo-50 cursor-pointer text-sm text-gray-700 border-b border-gray-50 last:border-0"
+                            className="px-4 py-2 hover:bg-[#1e3988]/5 cursor-pointer text-sm text-gray-700 border-b border-gray-50 last:border-0"
                             onClick={() => {
                               setRequesterSearch(`${r.nome} - ${r.setor}`);
                               setShowRequesterDropdown(false);
@@ -318,7 +324,7 @@ const NewCall = () => {
 
                 <div className="relative" onClick={(e) => e.stopPropagation()}>
                   <label className={`${labelClass} mb-2 block`}>
-                    <MdCategory className="text-indigo-600" />
+                    <MdCategory className="text-[#1e3988]" />
                     Categoria *
                   </label>
                   <div className="flex gap-2">
@@ -348,7 +354,7 @@ const NewCall = () => {
                     <button
                       type="button"
                       onClick={() => setIsCategoryModalOpen(true)}
-                      className="px-3 bg-indigo-50 border border-indigo-200 text-indigo-600 rounded-xl hover:bg-indigo-100 transition-colors flex items-center justify-center shadow-sm"
+                      className="px-3 bg-[#1e3988]/5 border border-[#1e3988]/20 text-[#1e3988] rounded-xl hover:bg-[#1e3988]/10 transition-colors flex items-center justify-center shadow-sm"
                     >
                       <MdAdd className="text-xl" />
                     </button>
@@ -359,7 +365,7 @@ const NewCall = () => {
                         filteredCategories.map((cat) => (
                           <div
                             key={cat.id}
-                            className="px-4 py-3 hover:bg-indigo-50 cursor-pointer text-sm text-gray-700 border-b border-gray-50 last:border-0"
+                            className="px-4 py-3 hover:bg-[#1e3988]/5 cursor-pointer text-sm text-gray-700 border-b border-gray-50 last:border-0"
                             onClick={() => {
                               setCategorySearch(cat.descricao);
                               setShowCategoryDropdown(false);
@@ -380,7 +386,7 @@ const NewCall = () => {
 
                 <div className="relative" onClick={(e) => e.stopPropagation()}>
                   <label className={`${labelClass} mb-2 block`}>
-                    <MdComputer className="text-indigo-600" />
+                    <MdComputer className="text-[#1e3988]" />
                     Equipamento *
                   </label>
                   <div className="flex gap-2">
@@ -410,7 +416,7 @@ const NewCall = () => {
                     <button
                       type="button"
                       onClick={() => setIsEquipmentModalOpen(true)}
-                      className="px-3 bg-indigo-50 border border-indigo-200 text-indigo-600 rounded-xl hover:bg-indigo-100 transition-colors flex items-center justify-center shadow-sm"
+                      className="px-3 bg-[#1e3988]/5 border border-[#1e3988]/20 text-[#1e3988] rounded-xl hover:bg-[#1e3988]/10 transition-colors flex items-center justify-center shadow-sm"
                     >
                       <MdAdd className="text-xl" />
                     </button>
@@ -421,7 +427,7 @@ const NewCall = () => {
                         filteredEquipments.map((eq) => (
                           <div
                             key={eq.id}
-                            className="px-4 py-2 hover:bg-indigo-50 cursor-pointer text-sm text-gray-700 border-b border-gray-50 last:border-0"
+                            className="px-4 py-2 hover:bg-[#1e3988]/5 cursor-pointer text-sm text-gray-700 border-b border-gray-50 last:border-0"
                             onClick={() => {
                               setEquipmentSearch(`${eq.nome} - ${eq.marcaModelo}`);
                               setShowEquipmentDropdown(false);
@@ -443,7 +449,7 @@ const NewCall = () => {
 
                 <div className="relative" onClick={(e) => e.stopPropagation()}>
                   <label className={`${labelClass} mb-2 block`}>
-                    <MdLabel className="text-indigo-600" />
+                    <MdLabel className="text-[#1e3988]" />
                     Classificação *
                   </label>
                   <div className="relative">
@@ -475,7 +481,7 @@ const NewCall = () => {
                         filteredClassifications.map((opt) => (
                           <div
                             key={opt}
-                            className="px-4 py-3 hover:bg-indigo-50 cursor-pointer text-sm text-gray-700 border-b border-gray-50 last:border-0"
+                            className="px-4 py-3 hover:bg-[#1e3988]/5 cursor-pointer text-sm text-gray-700 border-b border-gray-50 last:border-0"
                             onClick={() => {
                               setClassificationSearch(opt);
                               setShowClassificationDropdown(false);
@@ -497,7 +503,7 @@ const NewCall = () => {
 
               <div>
                 <label className={`${labelClass} mb-2 block`}>
-                  <MdDescription className="text-indigo-600" />
+                  <MdDescription className="text-[#1e3988]" />
                   Descrição *
                 </label>
                 <textarea
@@ -511,7 +517,7 @@ const NewCall = () => {
 
               <div>
                 <label className={`${labelClass} mb-3 block`}>
-                  <MdPriorityHigh className="text-indigo-600" />
+                  <MdPriorityHigh className="text-[#1e3988]" />
                   Prioridade *
                 </label>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -537,7 +543,7 @@ const NewCall = () => {
 
               <div>
                 <label className={`${labelClass} mb-2 block`}>
-                  <MdOutlineFileUpload className="text-indigo-600" />
+                  <MdOutlineFileUpload className="text-[#1e3988]" />
                   Anexo (opcional)
                 </label>
                 <label
@@ -584,7 +590,7 @@ const NewCall = () => {
               <button
                 type="submit"
                 disabled={createTicket.isPending}
-                className="px-8 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl font-medium text-sm hover:from-blue-700 hover:to-indigo-700 transition-all shadow-lg shadow-indigo-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                className="px-8 py-3 bg-gradient-to-r from-[#1e3988] to-[#2563eb] text-white rounded-xl font-semibold text-sm hover:shadow-lg hover:shadow-blue-500/20 transition-all shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
               >
                 <MdSend className="text-lg" />
                 {createTicket.isPending ? "Criando..." : "Criar Chamado"}

@@ -216,20 +216,23 @@ const Boards = () => {
 
   return (
     <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
-      <div className="flex flex-col bg-gray-50 min-h-full">
+      <div className="flex flex-col bg-slate-50 min-h-full">
 
         {/* ── Page Header ─────────────────────────────────────────────────── */}
-        <div className="flex-shrink-0 bg-white border-b border-gray-100 px-8 pt-7 pb-5 shadow-sm">
+        <div className="flex-shrink-0 bg-white/80 backdrop-blur-xl border-b border-slate-200/50 px-8 pt-7 pb-5 shadow-sm">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-blue-600 to-indigo-700 shadow-lg shadow-blue-200">
+            <div className="flex items-center gap-4">
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-[#1e3988] to-[#2563eb] shadow-lg shadow-blue-500/20 group-hover:scale-105 transition-transform">
                 <MdOutlineViewKanban className="text-white" size={22} />
               </div>
               <div>
-                <h1 className="text-xl font-bold text-gray-900 leading-tight">
+                <h1 
+                  className="text-xl font-bold text-slate-800 leading-tight"
+                  style={{ fontFamily: 'var(--font-display)' }}
+                >
                   Kanban — Chamados
                 </h1>
-                <p className="text-xs text-gray-500 mt-0.5">
+                <p className="text-xs text-slate-500 mt-0.5 font-medium">
                   Arraste os cards para mover entre colunas
                 </p>
               </div>
@@ -237,48 +240,55 @@ const Boards = () => {
 
             {/* Total badge */}
             {!isLoading && (
-              <div className="flex items-center gap-2 rounded-xl bg-blue-50 px-4 py-2 text-blue-700">
-                <span className="text-2xl font-bold">{totalVisible}</span>
-                <span className="text-xs font-medium leading-tight">
-                  chamados<br />
-                  <span className="text-blue-400">exibidos</span>
+              <div className="flex items-center gap-3 rounded-2xl bg-gradient-to-r from-[#1e3988]/5 to-[#2563eb]/5 px-5 py-3 border border-[#1e3988]/10">
+                <span 
+                  className="text-3xl font-bold text-[#1e3988]"
+                  style={{ fontFamily: 'var(--font-display)' }}
+                >
+                  {totalVisible}
                 </span>
+                <div className="text-xs font-medium leading-tight">
+                  <span className="text-slate-600">chamados</span>
+                  <br />
+                  <span className="text-slate-400">exibidos</span>
+                </div>
               </div>
             )}
           </div>
 
           {/* ── Filter bar ──────────────────────────────────────────────── */}
-          <div className="mt-5 flex flex-wrap items-center gap-3">
+          <div className="mt-6 flex flex-wrap items-center gap-4">
             {/* Search */}
-            <div className="relative flex-1 min-w-[200px] max-w-xs">
-              <MdSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+            <div className="relative flex-1 min-w-[200px] max-w-xs group">
+              <MdSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-[#1e3988] transition-colors" size={18} />
               <input
                 type="text"
                 placeholder="Buscar chamado..."
                 value={search}
                 onChange={e => setSearch(e.target.value)}
-                className="w-full rounded-xl border border-gray-200 bg-gray-50 py-2 pl-9 pr-3 text-sm text-gray-700 placeholder-gray-400 focus:border-blue-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-100 transition"
+                className="w-full rounded-xl border border-slate-200 bg-slate-50/50 py-2.5 pl-9 pr-3 text-sm text-slate-700 placeholder-slate-400 focus:border-[#1e3988] focus:bg-white focus:outline-none focus:ring-4 focus:ring-[#1e3988]/10 transition-all duration-200"
               />
             </div>
 
             {/* Priority pills */}
-            <div className="flex items-center gap-1.5">
-              <MdTune className="text-gray-400" size={18} />
-              <span className="text-xs font-medium text-gray-500 mr-1">Prioridade:</span>
+            <div className="flex items-center gap-2">
+              <MdTune className="text-slate-400" size={18} />
+              <span className="text-xs font-semibold text-slate-500 mr-1" style={{ fontFamily: 'var(--font-display)' }}>Prioridade:</span>
               {PRIORITY_OPTIONS.map(p => {
                 const active = filterPriority === p
                 const colorMap: Record<string, string> = {
-                  Todos: active ? "bg-gray-700 text-white" : "text-gray-600 hover:bg-gray-100",
-                  Crítica: active ? "bg-red-700 text-white shadow-red-300 shadow-md" : "text-red-700 hover:bg-red-50 border-red-300",
-                  Alta:  active ? "bg-red-500 text-white shadow-red-200 shadow-md" : "text-red-600 hover:bg-red-50 border-red-200",
-                  Média: active ? "bg-amber-500 text-white shadow-amber-200 shadow-md" : "text-amber-600 hover:bg-amber-50 border-amber-200",
-                  Baixa: active ? "bg-green-500 text-white shadow-green-200 shadow-md" : "text-green-600 hover:bg-green-50 border-green-200",
+                  Todos: active ? "bg-slate-800 text-white shadow-lg shadow-slate-300" : "text-slate-600 hover:bg-slate-100",
+                  Crítica: active ? "bg-rose-600 text-white shadow-lg shadow-rose-300" : "text-rose-600 hover:bg-rose-50 border-rose-200",
+                  Alta:  active ? "bg-red-500 text-white shadow-lg shadow-red-300" : "text-red-600 hover:bg-red-50 border-red-200",
+                  Média: active ? "bg-amber-500 text-white shadow-lg shadow-amber-300" : "text-amber-600 hover:bg-amber-50 border-amber-200",
+                  Baixa: active ? "bg-emerald-500 text-white shadow-lg shadow-emerald-300" : "text-emerald-600 hover:bg-emerald-50 border-emerald-200",
                 }
                 return (
                   <button
                     key={p}
                     onClick={() => setFilterPriority(p)}
-                    className={`rounded-full border px-3 py-1 text-xs font-semibold transition-all duration-150 ${colorMap[p]} ${!active ? "border-gray-200" : "border-transparent"}`}
+                    className={`rounded-full border px-3.5 py-1.5 text-xs font-semibold transition-all duration-200 hover:scale-105 ${colorMap[p]} ${!active ? "border-slate-200" : "border-transparent"}`}
+                    style={{ fontFamily: 'var(--font-display)' }}
                   >
                     {p}
                   </button>
@@ -287,12 +297,13 @@ const Boards = () => {
             </div>
 
             {/* Sort dropdown */}
-            <div className="flex items-center gap-1.5 ml-auto">
-              <MdSort className="text-gray-400" size={16} />
+            <div className="flex items-center gap-2 ml-auto">
+              <MdSort className="text-slate-400" size={16} />
               <select
                 value={sortBy}
                 onChange={e => setSortBy(e.target.value)}
-                className="rounded-xl border border-gray-200 bg-gray-50 py-2 pl-3 pr-8 text-xs font-medium text-gray-700 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-100 transition appearance-none cursor-pointer"
+                className="rounded-xl border border-slate-200 bg-slate-50/50 py-2.5 pl-3 pr-10 text-xs font-semibold text-slate-700 focus:border-[#1e3988] focus:outline-none focus:ring-4 focus:ring-[#1e3988]/10 transition appearance-none cursor-pointer"
+                style={{ fontFamily: 'var(--font-display)' }}
               >
                 {SORT_OPTIONS.map(o => (
                   <option key={o.value} value={o.value}>{o.label}</option>
@@ -305,13 +316,13 @@ const Boards = () => {
         {/* ── Kanban columns ────────────────────────────────────────────────── */}
         <div className="overflow-x-auto px-8 py-8">
           {isLoading ? (
-            <div className="flex gap-5">
+            <div className="flex gap-6">
               {Object.keys(COLUMN_CONFIG).map(k => (
                 <ColumnSkeleton key={k} config={COLUMN_CONFIG[k]} />
               ))}
             </div>
           ) : (
-            <div className="flex items-start gap-8 min-h-full">
+            <div className="flex items-start gap-6 min-h-full">
               {Object.entries(columns).map(([columnId, column]) => (
                 <Column
                   key={columnId}
@@ -364,34 +375,42 @@ const Column = ({ id, column, onOpen }: ColumnProps) => {
     <div className="flex min-w-[350px] max-w-[450px] flex-1 flex-col">
 
       {/* Column header */}
-      <div className={`mb-3 rounded-2xl bg-gradient-to-r ${cfg.gradient} p-4 shadow-lg`}>
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2 text-white">
-            <span className="opacity-80">{cfg.icon}</span>
-            <span className="text-sm font-bold tracking-wide">{cfg.label}</span>
+      <div className={`mb-4 rounded-2xl bg-gradient-to-r ${cfg.gradient} p-4 shadow-lg shadow-black/10 relative overflow-hidden group`}>
+        {/* Glow effect */}
+        <div className="absolute -top-10 -right-10 w-20 h-20 bg-white/10 rounded-full blur-xl group-hover:bg-white/20 transition-all duration-500" />
+        
+        <div className="relative flex items-center justify-between">
+          <div className="flex items-center gap-3 text-white">
+            <span className="opacity-90">{cfg.icon}</span>
+            <span 
+              className="text-sm font-bold tracking-wide"
+              style={{ fontFamily: 'var(--font-display)' }}
+            >
+              {cfg.label}
+            </span>
           </div>
-          <div className={`flex items-center gap-1.5 rounded-full ${cfg.badge} px-2.5 py-0.5`}>
+          <div className={`flex items-center gap-1.5 rounded-full ${cfg.badge} px-3 py-1 shadow-sm`}>
             <span className="text-xs font-bold">{column.items.length}</span>
           </div>
         </div>
 
         {/* Pagination inside header */}
         {totalPages > 1 && (
-          <div className="mt-3 flex items-center justify-between rounded-xl bg-white/20 px-2 py-1">
+          <div className="mt-4 flex items-center justify-between rounded-xl bg-white/15 backdrop-blur-sm px-3 py-2">
             <button
               onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
               disabled={safeCurrentPage === 1}
-              className="rounded-lg p-1 text-white hover:bg-white/20 disabled:opacity-30 transition"
+              className="rounded-lg p-1 text-white/80 hover:bg-white/20 hover:text-white disabled:opacity-30 transition"
             >
               <MdNavigateBefore size={18} />
             </button>
-            <span className="text-xs font-semibold text-white">
-              Página {safeCurrentPage} de {totalPages}
+            <span className="text-xs font-semibold text-white/90">
+              {safeCurrentPage} / {totalPages}
             </span>
             <button
               onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
               disabled={safeCurrentPage === totalPages}
-              className="rounded-lg p-1 text-white hover:bg-white/20 disabled:opacity-30 transition"
+              className="rounded-lg p-1 text-white/80 hover:bg-white/20 hover:text-white disabled:opacity-30 transition"
             >
               <MdNavigateNext size={18} />
             </button>
@@ -402,10 +421,10 @@ const Column = ({ id, column, onOpen }: ColumnProps) => {
       {/* Drop zone */}
       <div
         ref={setNodeRef}
-        className={`flex flex-1 flex-col gap-2 rounded-2xl border-2 p-3 transition-all duration-200 min-h-[300px]
+        className={`flex flex-1 flex-col gap-3 rounded-2xl border-2 p-4 transition-all duration-300 min-h-[350px]
           ${isOver
-            ? `${cfg.border} bg-blue-50/60 shadow-inner`
-            : "border-gray-100 bg-white/70 shadow-sm backdrop-blur-sm"
+            ? `${cfg.border} bg-blue-50/80 shadow-inner scale-[1.02]`
+            : "border-slate-200/50 bg-white/80 shadow-sm backdrop-blur-sm hover:shadow-md"
           }`}
       >
         {currentItems.length > 0
@@ -413,10 +432,14 @@ const Column = ({ id, column, onOpen }: ColumnProps) => {
               <Card key={task.id} columnId={id} task={task} onOpen={onOpen} />
             ))
           : (
-            <div className="flex flex-1 flex-col items-center justify-center gap-3 py-10 text-center">
-              {cfg.emptyIcon}
-              <p className="text-sm text-gray-400 font-medium">{cfg.emptyMsg}</p>
-              <p className="text-xs text-gray-300">Arraste um chamado para cá</p>
+            <div className="flex flex-1 flex-col items-center justify-center gap-4 py-12 text-center">
+              <div className="w-16 h-16 rounded-2xl bg-slate-100 flex items-center justify-center">
+                {cfg.emptyIcon}
+              </div>
+              <div>
+                <p className="text-sm text-slate-500 font-semibold">{cfg.emptyMsg}</p>
+                <p className="text-xs text-slate-400 mt-1">Arraste um chamado para cá</p>
+              </div>
             </div>
           )
         }

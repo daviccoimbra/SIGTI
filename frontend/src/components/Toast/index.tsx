@@ -27,7 +27,7 @@ const ToastCard = ({
 }) => {
   const [visible, setVisible] = useState(false);
   const [progress, setProgress] = useState(100);
-  const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const duration = 3000;
 

@@ -1,4 +1,4 @@
-import { ChartResponse, EvolutionData } from '../../../services/dashboard';
+import type { ChartResponse, EvolutionData } from '../../../services/dashboard';
 
 interface DashboardChartsProps {
   charts: ChartResponse | null;
@@ -10,12 +10,6 @@ const STATUS_COLORS: Record<string, string> = {
   'Para Fazer': '#6b7280',
   'Em Andamento': '#3b82f6',
   'Aguardando Cliente': '#8b5cf6',
-};
-
-const PRIORITY_COLORS: Record<string, string> = {
-  'Alta/Crítica': '#ef4444',
-  'Média': '#f59e0b',
-  'Baixa': '#22c55e',
 };
 
 function SimplePieChart({ data, colors }: { data: { name: string; value: number }[]; colors: Record<string, string> }) {

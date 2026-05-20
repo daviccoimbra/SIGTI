@@ -9,7 +9,7 @@ import {
   HiOutlineHashtag,
 } from "react-icons/hi2"
 
-import { TaskT } from "../../../types"
+import type { TaskT } from "../../../types"
 
 import { formatData } from "../../../utils/formatData"
 
@@ -25,6 +25,8 @@ const PRIORITY_CONFIG: Record<string, {
   dot: string
   bar: string
   label: string
+  border: string
+  hoverBg: string
 }> = {
   Crítica: {
     bg: "bg-red-100",
@@ -32,6 +34,8 @@ const PRIORITY_CONFIG: Record<string, {
     dot: "bg-red-600",
     bar: "bg-gradient-to-b from-red-600 to-red-500",
     label: "Crítica",
+    border: "border-red-200",
+    hoverBg: "hover:bg-red-50",
   },
   Alta: {
     bg: "bg-red-50",
@@ -39,6 +43,8 @@ const PRIORITY_CONFIG: Record<string, {
     dot: "bg-red-500",
     bar: "bg-gradient-to-b from-red-500 to-red-400",
     label: "Alta",
+    border: "border-red-100",
+    hoverBg: "hover:bg-red-50",
   },
   Média: {
     bg: "bg-amber-50",
@@ -46,6 +52,8 @@ const PRIORITY_CONFIG: Record<string, {
     dot: "bg-amber-500",
     bar: "bg-gradient-to-b from-amber-500 to-amber-400",
     label: "Média",
+    border: "border-amber-100",
+    hoverBg: "hover:bg-amber-50",
   },
   Media: {
     bg: "bg-amber-50",
@@ -53,22 +61,28 @@ const PRIORITY_CONFIG: Record<string, {
     dot: "bg-amber-500",
     bar: "bg-gradient-to-b from-amber-500 to-amber-400",
     label: "Média",
+    border: "border-amber-100",
+    hoverBg: "hover:bg-amber-50",
   },
   Baixa: {
-    bg: "bg-green-50",
-    text: "text-green-600",
-    dot: "bg-green-500",
-    bar: "bg-gradient-to-b from-green-500 to-green-400",
+    bg: "bg-emerald-50",
+    text: "text-emerald-600",
+    dot: "bg-emerald-500",
+    bar: "bg-gradient-to-b from-emerald-500 to-emerald-400",
     label: "Baixa",
+    border: "border-emerald-100",
+    hoverBg: "hover:bg-emerald-50",
   },
 }
 
 const DEFAULT_PRIORITY = {
-  bg: "bg-gray-50",
-  text: "text-gray-500",
-  dot: "bg-gray-400",
-  bar: "bg-gradient-to-b from-gray-400 to-gray-300",
+  bg: "bg-slate-50",
+  text: "text-slate-500",
+  dot: "bg-slate-400",
+  bar: "bg-gradient-to-b from-slate-400 to-slate-300",
   label: "—",
+  border: "border-slate-100",
+  hoverBg: "hover:bg-slate-50",
 }
 
 const Card = ({ columnId, task, onOpen }: TaskProps) => {
@@ -95,74 +109,82 @@ const Card = ({ columnId, task, onOpen }: TaskProps) => {
       className="w-full"
     >
       <div
-        className={`group relative flex overflow-hidden rounded-xl border bg-white shadow-sm transition-all duration-200
-          hover:shadow-md hover:-translate-y-0.5 hover:border-blue-200
-          ${isDragging ? "shadow-xl border-blue-300 rotate-1 scale-105" : "border-gray-100"}`}
+        className={`group relative flex overflow-hidden rounded-2xl border bg-white shadow-sm transition-all duration-300 hover:shadow-lg hover:-translate-y-1 ${prio.border} ${prio.hoverBg}
+          ${isDragging ? "shadow-xl border-[#1e3988]/30 rotate-1 scale-105 ring-2 ring-[#1e3988]/20" : ""}`}
       >
-        {/* Priority left-bar */}
-        <div className={`w-1 shrink-0 rounded-l-xl ${prio.bar}`} />
+        {/* Priority left-bar with glow */}
+        <div className={`relative w-1.5 shrink-0 rounded-l-2xl ${prio.bar}`}>
+          <div className={`absolute inset-0 blur-sm ${prio.bar} opacity-50`} />
+        </div>
 
         {/* Card body */}
-        <div className="flex flex-1 flex-col gap-3 p-5 min-w-0">
+        <div className="flex flex-1 flex-col gap-3 p-4 min-w-0">
 
           {/* Title row */}
           <div className="flex items-start justify-between gap-3">
-            <span className="text-[16px] font-bold text-gray-800 leading-tight line-clamp-2 flex-1 min-w-0">
+            <span 
+              className="text-[15px] font-bold text-slate-800 leading-tight line-clamp-2 flex-1 min-w-0"
+              style={{ fontFamily: 'var(--font-display)' }}
+            >
               {task.titulo}
             </span>
 
             {/* Priority badge */}
             <span
-              className={`inline-flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-bold ${prio.bg} ${prio.text}`}
+              className={`inline-flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-bold ${prio.bg} ${prio.text}`}
+              style={{ fontFamily: 'var(--font-display)' }}
             >
-              <span className={`h-2 w-2 rounded-full ${prio.dot}`} />
+              <span className={`h-1.5 w-1.5 rounded-full ${prio.dot}`} />
               {prio.label}
             </span>
           </div>
 
           {/* Protocolo + Solicitante */}
           <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-            <span className="flex items-center gap-1.5 text-[12px] text-gray-400">
-              <HiOutlineHashtag size={13} />
-              {task.protocolo}
+            <span className="flex items-center gap-1.5 text-[11px] text-slate-400 font-medium">
+              <HiOutlineHashtag size={12} />
+              <span className="font-mono">{task.protocolo}</span>
             </span>
-            <span className="flex items-center gap-1.5 text-[12px] text-gray-500 truncate min-w-0">
-              <HiOutlineUser size={13} className="shrink-0" />
+            <span className="flex items-center gap-1.5 text-[11px] text-slate-500 truncate min-w-0">
+              <HiOutlineUser size={12} className="shrink-0 text-slate-400" />
               <span className="truncate">{task.solicitante}</span>
             </span>
           </div>
 
           {/* Category chip (if present) */}
           {task.category?.descricao && (
-            <span className="inline-block w-fit rounded-md bg-blue-50 px-3 py-1 text-[11px] font-medium text-blue-600 truncate max-w-full">
+            <span 
+              className="inline-block w-fit rounded-lg bg-[#1e3988]/5 px-3 py-1 text-[10px] font-semibold text-[#1e3988] truncate max-w-full border border-[#1e3988]/10"
+              style={{ fontFamily: 'var(--font-display)' }}
+            >
               {task.category.descricao}
             </span>
           )}
 
           {/* Footer */}
-          <div className="mt-2 flex items-center justify-between gap-3 border-t border-dashed border-gray-100 pt-3">
-            <div className="flex items-center gap-1.5 text-[12px] text-gray-400">
-              <MdOutlineAccessTime size={15} className="shrink-0" />
+          <div className="mt-2 flex items-center justify-between gap-3 border-t border-dashed border-slate-100 pt-3">
+            <div className="flex items-center gap-1.5 text-[11px] text-slate-400 font-medium">
+              <MdOutlineAccessTime size={14} className="shrink-0" />
               <span>{formatData(task.createdAt)}</span>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5">
               {/* Drag handle */}
               <div
                 {...listeners}
-                className="cursor-grab touch-none rounded-lg p-1.5 text-gray-300 hover:bg-gray-100 hover:text-gray-500 transition"
+                className="cursor-grab touch-none rounded-lg p-1.5 text-slate-300 hover:bg-slate-100 hover:text-slate-500 transition-all duration-200 active:cursor-grabbing"
                 title="Arrastar"
               >
-                <MdDragIndicator size={18} />
+                <MdDragIndicator size={16} />
               </div>
 
               {/* Open button */}
               <button
                 onClick={() => onOpen?.(task)}
-                className="rounded-lg p-1.5 text-gray-400 hover:bg-blue-600 hover:text-white transition"
+                className="rounded-lg p-1.5 text-slate-400 hover:bg-[#1e3988] hover:text-white transition-all duration-200"
                 title="Abrir chamado"
               >
-                <MdOutlineFileOpen size={17} />
+                <MdOutlineFileOpen size={16} />
               </button>
             </div>
           </div>

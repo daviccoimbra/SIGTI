@@ -1,5 +1,5 @@
 import api from './api';
-import { UserT } from '../types';
+import type { UserT } from '../types';
 
 export const getUsers = async (params?: { nome?: string; departamento?: string; cargo?: string }) => {
   const response = await api.get<UserT[]>('/users', { params });
