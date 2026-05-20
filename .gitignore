@@ -10,6 +10,7 @@ dist/
 build/
 
 # Logs
+logs/
 *.log
 
 # Prisma / SQLite
@@ -18,6 +19,11 @@ dev.db
 
 # Docker
 docker-compose.override.yml
+*.pid
 
 # Sistema
 .DS_Store
+
+#AI/Agents
+.agents/
+skills-lock.json
