@@ -3,6 +3,7 @@ import { dashboardService, type QueryParams } from '../../../services/dashboard'
 import { ActiveKpiCards } from './ActiveKpiCards';
 import { ActiveCharts } from './ActiveCharts';
 import { PriorityAlerts } from './PriorityAlerts';
+import { ActiveTicketAgeCard } from './ActiveTicketAgeCard';
 
 interface ActiveOverviewProps {
   queryParams: QueryParams;
@@ -29,6 +30,7 @@ export function ActiveOverview({ queryParams }: ActiveOverviewProps) {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <PriorityAlerts tickets={data?.alerts || []} isLoading={isLoading} />
+        <ActiveTicketAgeCard queryParams={queryParams} />
       </div>
     </div>
   );

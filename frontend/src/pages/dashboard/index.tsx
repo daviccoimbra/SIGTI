@@ -8,7 +8,7 @@ import {
   HiOutlineSparkles
 } from 'react-icons/hi2';
 import { HiOutlineTrendingUp } from 'react-icons/hi';
-import { MdDashboard, MdAnalytics } from 'react-icons/md';
+import { MdDashboard } from 'react-icons/md';
 
 import { dashboardService } from '../../services/dashboard';
 import { useDateRange } from '../../hooks/useDateRange';
@@ -21,6 +21,15 @@ import { PriorityAlerts } from './components/PriorityAlerts';
 import { AverageResolutionTimeCard } from './components/AverageResolutionTimeCard';
 import { SLAComplianceIndicator } from './components/SLAComplianceIndicator';
 import { TechnicianDistributionChart } from './components/TechnicianDistributionChart';
+import { CreationVsResolutionCard } from './components/CreationVsResolutionCard';
+import { OperationalEfficiencyCard } from './components/OperationalEfficiencyCard';
+import { AvgFirstResponseTimeCard } from './components/AvgFirstResponseTimeCard';
+import { OverdueTicketsCard } from './components/OverdueTicketsCard';
+import { AvgTimeByStatusChart } from './components/AvgTimeByStatusChart';
+import { ResolutionByCategoryChart } from './components/ResolutionByCategoryChart';
+import { EquipmentIssuesChart } from './components/EquipmentIssuesChart';
+import { CategoryTrendChart } from './components/CategoryTrendChart';
+import { CategoryByUnitChart } from './components/CategoryByUnitChart';
 
 type TabId = 'em-aberto' | 'geral' | 'operacional' | 'analises' | 'avancado';
 
@@ -109,6 +118,10 @@ const Dashboard = () => {
           <div className="space-y-8">
             <KpiCards data={kpis || null} isLoading={kpisLoading} />
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <CreationVsResolutionCard isLoading={kpisLoading} queryParams={queryParams} />
+              <OperationalEfficiencyCard isLoading={kpisLoading} queryParams={queryParams} />
+            </div>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <AverageResolutionTimeCard isLoading={kpisLoading} queryParams={queryParams} />
               <SLAComplianceIndicator isLoading={kpisLoading} queryParams={queryParams} />
             </div>
@@ -123,32 +136,18 @@ const Dashboard = () => {
       case 'operacional':
         return (
           <div className="space-y-8">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               <AverageResolutionTimeCard isLoading={kpisLoading} queryParams={queryParams} />
+              <AvgFirstResponseTimeCard isLoading={kpisLoading} queryParams={queryParams} />
               <SLAComplianceIndicator isLoading={kpisLoading} queryParams={queryParams} />
             </div>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <OverdueTicketsCard isLoading={kpisLoading} queryParams={queryParams} />
               <PriorityAlerts tickets={alerts || []} isLoading={alertsLoading} />
-              <div className="relative overflow-hidden bg-gradient-to-br from-rose-500 to-rose-600 rounded-2xl p-6 text-white shadow-lg shadow-rose-500/20">
-                <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2" />
-                <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/5 rounded-full translate-y-1/2 -translate-x-1/2" />
-                <div className="relative z-10">
-                  <div className="flex items-center gap-2 mb-4">
-                    <div className="p-2 bg-white/20 rounded-lg">
-                      <MdAnalytics className="w-5 h-5" />
-                    </div>
-                    <span className="text-sm font-medium text-white/80">Tickets Críticos</span>
-                  </div>
-                  <div className="text-5xl font-bold mb-2">{kpis?.criticalOpen || 0}</div>
-                  <p className="text-sm text-white/70">chamados de alta prioridade não resolvidos</p>
-                  {kpis && kpis.criticalOpen > 0 && (
-                    <div className="mt-4 flex items-center gap-2 text-xs bg-white/20 rounded-full px-3 py-1 w-fit">
-                      <span className="w-2 h-2 bg-white rounded-full animate-pulse" />
-                      Requer atenção imediata
-                    </div>
-                  )}
-                </div>
-              </div>
+            </div>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <AvgTimeByStatusChart isLoading={kpisLoading} queryParams={queryParams} />
+              <ResolutionByCategoryChart isLoading={kpisLoading} queryParams={queryParams} />
             </div>
           </div>
         );
@@ -217,6 +216,13 @@ const Dashboard = () => {
                 )}
               </div>
             </div>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <EquipmentIssuesChart isLoading={chartsLoading} queryParams={queryParams} />
+              <CategoryTrendChart isLoading={chartsLoading} queryParams={queryParams} />
+            </div>
+            <div className="grid grid-cols-1 lg:grid-cols-1 gap-6">
+              <CategoryByUnitChart isLoading={chartsLoading} queryParams={queryParams} />
+            </div>
           </div>
         );
 
@@ -226,6 +232,10 @@ const Dashboard = () => {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <TechnicianDistributionChart isLoading={kpisLoading} queryParams={queryParams} />
               <AverageResolutionTimeCard isLoading={kpisLoading} queryParams={queryParams} />
+            </div>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <OverdueTicketsCard isLoading={kpisLoading} queryParams={queryParams} />
+              <OperationalEfficiencyCard isLoading={kpisLoading} queryParams={queryParams} />
             </div>
             <DashboardCharts
               charts={charts || null}

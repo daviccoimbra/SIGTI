@@ -512,7 +512,7 @@ router.get('/avg-first-response-time', async (req, res) => {
 
     tickets.forEach(ticket => {
       const firstHistory = ticket.history[0];
-      if (firstHistory && firstHistory.from !== 'backlog') {
+      if (firstHistory) {
         const responseTime = Math.abs(firstHistory.date.getTime() - ticket.createdAt.getTime());
         totalResponseTime += responseTime;
         countWithResponse++;
@@ -614,10 +614,13 @@ router.get('/creation-vs-resolution', async (req, res) => {
           createdAt: { gte: effectiveStartDate, lte: effectiveEndDate }
         }
       }),
-      prisma.history.count({
+      prisma.ticket.count({
         where: {
-          to: { in: RESOLVED_STATUSES },
-          date: { gte: effectiveStartDate, lte: effectiveEndDate }
+          OR: [
+            { status: { in: RESOLVED_STATUSES } },
+            { isArchived: true }
+          ],
+          updatedAt: { gte: effectiveStartDate, lte: effectiveEndDate }
         }
       })
     ]);
@@ -650,6 +653,7 @@ router.get('/ticket-age', async (req, res) => {
 
     const tickets = await prisma.ticket.findMany({
       where: {
+        isArchived: false,
         status: { notIn: RESOLVED_STATUSES },
         createdAt: { gte: effectiveStartDate, lte: effectiveEndDate }
       },
@@ -689,14 +693,14 @@ router.get('/resolution-time-by-category', async (req, res) => {
 
     const tickets = await prisma.ticket.findMany({
       where: {
-        status: { in: RESOLVED_STATUSES },
+        OR: [
+          { status: { in: RESOLVED_STATUSES } },
+          { isArchived: true }
+        ],
         createdAt: { gte: effectiveStartDate, lte: effectiveEndDate }
       },
       include: {
-        category: true,
-        history: {
-          orderBy: { date: 'asc' }
-        }
+        category: true
       }
     });
 
@@ -704,17 +708,13 @@ router.get('/resolution-time-by-category', async (req, res) => {
 
     tickets.forEach(ticket => {
       const categoryName = ticket.category?.descricao || 'Sem categoria';
-      const closedHistory = [...ticket.history].filter(h => RESOLVED_STATUSES.includes(h.to)).pop();
+      const resolutionTime = Math.abs(ticket.updatedAt.getTime() - ticket.createdAt.getTime());
 
-      if (closedHistory) {
-        const resolutionTime = Math.abs(closedHistory.date.getTime() - ticket.createdAt.getTime());
-
-        if (!categoryTimes[categoryName]) {
-          categoryTimes[categoryName] = { total: 0, count: 0 };
-        }
-        categoryTimes[categoryName].total += resolutionTime;
-        categoryTimes[categoryName].count++;
+      if (!categoryTimes[categoryName]) {
+        categoryTimes[categoryName] = { total: 0, count: 0 };
       }
+      categoryTimes[categoryName].total += resolutionTime;
+      categoryTimes[categoryName].count++;
     });
 
     const result = Object.entries(categoryTimes)
@@ -894,10 +894,13 @@ router.get('/operational-efficiency', async (req, res) => {
           createdAt: { gte: effectiveStartDate, lte: effectiveEndDate }
         }
       }),
-      prisma.history.count({
+      prisma.ticket.count({
         where: {
-          to: { in: RESOLVED_STATUSES },
-          date: { gte: effectiveStartDate, lte: effectiveEndDate }
+          OR: [
+            { status: { in: RESOLVED_STATUSES } },
+            { isArchived: true }
+          ],
+          updatedAt: { gte: effectiveStartDate, lte: effectiveEndDate }
         }
       })
     ]);
@@ -945,6 +948,12 @@ router.get('/avg-time-by-status', async (req, res) => {
       }
     });
 
+    const STATUS_DISPLAY_TO_CODE: Record<string, string> = {
+      'Para Fazer': 'backlog',
+      'Em Andamento': 'pending',
+      'Aguardando Cliente': 'todo',
+    };
+
     const statusTimes: Record<string, { total: number; count: number }> = {
       'backlog': { total: 0, count: 0 },
       'pending': { total: 0, count: 0 },
@@ -956,19 +965,25 @@ router.get('/avg-time-by-status', async (req, res) => {
 
       ticket.history.forEach(h => {
         const duration = h.date.getTime() - lastTime.getTime();
-        const fromStatus = h.from || 'backlog';
+        const fromCode = STATUS_DISPLAY_TO_CODE[h.from] || h.from;
 
-        if (statusTimes[fromStatus]) {
-          statusTimes[fromStatus].total += duration;
-          statusTimes[fromStatus].count++;
+        if (statusTimes[fromCode]) {
+          statusTimes[fromCode].total += duration;
+          statusTimes[fromCode].count++;
         }
 
         lastTime = h.date;
       });
     });
 
-    const result = Object.entries(statusTimes).map(([status, data]) => ({
-      status: status === 'backlog' ? 'Para Fazer' : status === 'pending' ? 'Em Andamento' : 'Aguardando Cliente',
+    const LABEL_MAP: Record<string, string> = {
+      'backlog': 'Para Fazer',
+      'pending': 'Em Andamento',
+      'todo': 'Aguardando Cliente'
+    };
+
+    const result = Object.entries(statusTimes).map(([code, data]) => ({
+      status: LABEL_MAP[code] || code,
       avgHours: data.count > 0 ? Math.round(data.total / data.count / 1000 / 60 / 60) : 0,
       count: data.count
     }));
@@ -980,7 +995,7 @@ router.get('/avg-time-by-status', async (req, res) => {
       periodEnd: toDateString(effectiveEndDate)
     });
   } catch (error) {
-    console.error('Error fetching avg time by status:', error);
+    console.error('Error fetching average time by status:', error);
     res.status(500).json({ error: 'Failed to fetch average time by status' });
   }
 });
