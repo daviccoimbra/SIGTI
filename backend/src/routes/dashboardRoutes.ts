@@ -1,76 +1,30 @@
 import { Router } from 'express';
 import prisma from '../lib/prisma.js';
+import { getDateRangeFromParams, buildDateFilter, toDateString } from '../utils/dateUtils.js';
 
 const router = Router();
 
-const getStartOfDay = (date: Date) => {
-  const start = new Date(date);
-  start.setHours(0, 0, 0, 0);
-  return start;
-};
+const RESOLVED_STATUSES = ['todo', 'resolved', 'closed', 'fechado', 'concluido', 'done', 'finalizado'];
 
-const getEndOfDay = (date: Date) => {
-  const end = new Date(date);
-  end.setHours(23, 59, 59, 999);
-  return end;
-};
+const CATEGORY_COLORS = [
+  '#6366f1', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6',
+  '#ec4899', '#14b8a6', '#f97316', '#06b6d4', '#84cc16',
+  '#a855f7', '#64748b'
+];
 
-// Helper para obter datas do query params
-const getDateRange = (query: Record<string, any>) => {
-  const startDate = query.startDate ? new Date(query.startDate) : null;
-  const endDate = query.endDate ? new Date(query.endDate) : null;
-  
-  return { startDate, endDate };
-};
-
-// Helper para construir where clause com filtro de data
-const buildDateFilter = (startDate: Date | null, endDate: Date | null, dateField: 'createdAt' | 'updatedAt' = 'createdAt') => {
-  if (startDate && endDate) {
-    return {
-      [dateField]: {
-        gte: getStartOfDay(startDate),
-        lte: getEndOfDay(endDate)
-      }
-    };
-  }
-  if (startDate) {
-    return {
-      [dateField]: {
-        gte: getStartOfDay(startDate)
-      }
-    };
-  }
-  if (endDate) {
-    return {
-      [dateField]: {
-        lte: getEndOfDay(endDate)
-      }
-    };
-  }
-  return {};
-};
-
-// Status que representam "resolvido/fechado"
-const RESOLVED_STATUSES = ['todo', 'resolved', 'closed', 'fechado', 'concluido', 'done'];
+// ─── Histórico (todos os chamados, incluindo arquivados) ───
 
 router.get('/kpis', async (req, res) => {
   try {
-    const { startDate, endDate } = getDateRange(req.query);
+    const { startDate, endDate } = getDateRangeFromParams(req.query);
     const dateFilter = buildDateFilter(startDate, endDate, 'createdAt');
     const dateFilterUpdated = buildDateFilter(startDate, endDate, 'updatedAt');
-    
-    const now = new Date();
-    const startOfToday = getStartOfDay(now);
-    const endOfToday = getEndOfDay(now);
-
-    // Se há filtro de período, usa ele; caso contrário usa "todos os tempos"
     const hasDateFilter = startDate || endDate;
 
-    // Contagens com suporte a filtro de período
+    const now = new Date();
+
     const [
       totalTickets,
-      totalResolved,
-      totalCreated,
       totalClosed,
       inProgress,
       backlog,
@@ -79,40 +33,37 @@ router.get('/kpis', async (req, res) => {
       totalEquipments,
       totalRequesters
     ] = await Promise.all([
-      // Total de tickets (ativos)
-      prisma.ticket.count({ 
-        where: { isArchived: false, ...(hasDateFilter ? dateFilter : {}) } 
-      }),
-      // Total resolvidos no período
       prisma.ticket.count({
-        where: { isArchived: false, status: { in: RESOLVED_STATUSES } }
+        where: { ...(hasDateFilter ? dateFilter : {}) }
       }),
-      // Total criado no período
       prisma.ticket.count({
-        where: { isArchived: false, ...(hasDateFilter ? dateFilter : {}) }
+        where: {
+          OR: [
+            { status: { in: RESOLVED_STATUSES } },
+            { isArchived: true }
+          ],
+          ...(hasDateFilter ? dateFilterUpdated : {})
+        }
       }),
-      // Total fechado no período
       prisma.ticket.count({
-        where: { isArchived: false, status: { in: RESOLVED_STATUSES }, ...(hasDateFilter ? dateFilterUpdated : {}) }
+        where: { isArchived: false, status: { notIn: RESOLVED_STATUSES }, ...(hasDateFilter ? dateFilter : {}) }
       }),
-      // Em andamento (não resolvido)
-      prisma.ticket.count({
-        where: { isArchived: false, status: { notIn: RESOLVED_STATUSES } }
-      }),
-      // Backlog (mais de 4 dias)
       prisma.ticket.count({
         where: {
           isArchived: false,
           status: 'backlog',
-          createdAt: { lt: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000) }
+          createdAt: {
+            ...(hasDateFilter ? { gte: startDate!, lte: endDate! } : {}),
+            lt: new Date(now.getTime() - 4 * 24 * 60 * 60 * 1000)
+          }
         }
       }),
-      // Críticos abertos
       prisma.ticket.count({
         where: {
           isArchived: false,
           prioridade: { in: ['Alta', 'Crítica', 'alta', 'critica'] },
-          status: { notIn: RESOLVED_STATUSES }
+          status: { notIn: RESOLVED_STATUSES },
+          ...(hasDateFilter ? dateFilter : {})
         }
       }),
       prisma.category.count(),
@@ -120,12 +71,10 @@ router.get('/kpis', async (req, res) => {
       prisma.requester.count()
     ]);
 
-    // Calcular taxa de resolução
-    const resolutionRate = totalTickets > 0 ? Math.round((totalResolved / totalTickets) * 100) : 0;
+    const resolutionRate = totalTickets > 0 ? Math.round((totalClosed / totalTickets) * 100) : 0;
 
-    // Calcular tempo médio de resposta
     const ticketsWithHistory = await prisma.ticket.findMany({
-      where: { isArchived: false },
+      where: { ...(hasDateFilter ? dateFilter : {}) },
       include: {
         history: {
           orderBy: { date: 'asc' },
@@ -150,8 +99,8 @@ router.get('/kpis', async (req, res) => {
 
     res.json({
       totalTickets,
-      totalResolved,
-      totalCreated,
+      totalResolved: totalClosed,
+      totalCreated: totalTickets,
       totalClosed,
       inProgress,
       backlog,
@@ -161,8 +110,8 @@ router.get('/kpis', async (req, res) => {
       totalEquipments,
       totalRequesters,
       avgResponseTime: avgResponseTime ? Math.round(avgResponseTime / 1000 / 60) : null,
-      periodStart: startDate?.toISOString() || null,
-      periodEnd: endDate?.toISOString() || null
+      periodStart: startDate ? toDateString(startDate) : null,
+      periodEnd: endDate ? toDateString(endDate) : null
     });
   } catch (error) {
     console.error('Error fetching KPIs:', error);
@@ -172,13 +121,12 @@ router.get('/kpis', async (req, res) => {
 
 router.get('/charts', async (req, res) => {
   try {
-    const { startDate, endDate } = getDateRange(req.query);
+    const { startDate, endDate } = getDateRangeFromParams(req.query);
     const dateFilter = buildDateFilter(startDate, endDate);
     const hasDateFilter = startDate || endDate;
 
-    // Busca tickets (incluindo arquivados para análises completas)
     const tickets = await prisma.ticket.findMany({
-      where: { isArchived: false, ...(hasDateFilter ? dateFilter : {}) },
+      where: { ...(hasDateFilter ? dateFilter : {}) },
       include: {
         category: true,
         requester: true,
@@ -190,6 +138,7 @@ router.get('/charts', async (req, res) => {
       backlog: 0,
       pending: 0,
       todo: 0,
+      finalizado: 0,
     };
 
     const priorityCount: Record<string, number> = {
@@ -205,18 +154,18 @@ router.get('/charts', async (req, res) => {
     const unitCount: Record<string, number> = {};
 
     tickets.forEach(ticket => {
-      const status = ticket.status || 'backlog';
-      if (statusCount[status] !== undefined) {
-        statusCount[status]++;
+      const status = ticket.isArchived ? 'finalizado' : (ticket.status || 'backlog');
+      if (status in statusCount) {
+        statusCount[status] = (statusCount[status] ?? 0) + 1;
       } else {
-        statusCount['backlog'] = (statusCount['backlog'] || 0) + 1;
+        statusCount['finalizado'] = (statusCount['finalizado'] ?? 0) + 1;
       }
 
       const priority = ticket.prioridade || 'Média';
-      if (priorityCount[priority] !== undefined) {
-        priorityCount[priority]++;
+      if (priority in priorityCount) {
+        priorityCount[priority] = (priorityCount[priority] ?? 0) + 1;
       } else {
-        priorityCount['Média']++;
+        priorityCount['Média'] = (priorityCount['Média'] ?? 0) + 1;
       }
 
       if (ticket.category?.descricao) {
@@ -227,16 +176,16 @@ router.get('/charts', async (req, res) => {
         departmentCount[ticket.departamento] = (departmentCount[ticket.departamento] || 0) + 1;
       }
 
-      // Contagem por unidade (do requester)
       if (ticket.requester?.unidade) {
         unitCount[ticket.requester.unidade] = (unitCount[ticket.requester.unidade] || 0) + 1;
       }
     });
 
     const statusData = [
-      { name: 'Para Fazer', value: statusCount.backlog, color: '#6b7280' },
+      { name: 'Para Fazer', value: statusCount.backlog, color: '#f59e0b' },
       { name: 'Em Andamento', value: statusCount.pending, color: '#3b82f6' },
-      { name: 'Aguardando Cliente', value: statusCount.todo, color: '#8b5cf6' },
+      { name: 'Aguardando Cliente', value: statusCount.todo, color: '#ef4444' },
+      { name: 'Finalizados', value: statusCount.finalizado, color: '#22c55e' },
     ];
 
     const priorityData = [
@@ -245,11 +194,10 @@ router.get('/charts', async (req, res) => {
       { name: 'Baixa', value: priorityCount['Baixa'] || 0, color: '#22c55e' }
     ];
 
-    const categoryData = Object.entries(categoryCount).map(([name, value]) => ({
-      name,
-      value,
-      color: `#${Math.floor(Math.random() * 16777215).toString(16).padStart(6, '0')}`
-    }));
+    const categoryData = Object.entries(categoryCount).map(([name, value], idx) => {
+      const color = CATEGORY_COLORS[idx % CATEGORY_COLORS.length]!;
+      return { name, value, color };
+    });
 
     const departmentData = Object.entries(departmentCount).map(([name, value]) => ({
       name,
@@ -276,10 +224,13 @@ router.get('/charts', async (req, res) => {
 
 router.get('/recent', async (req, res) => {
   try {
+    const { startDate, endDate } = getDateRangeFromParams(req.query);
+    const dateFilter = buildDateFilter(startDate, endDate);
+    const hasDateFilter = startDate || endDate;
     const limit = parseInt(req.query.limit as string) || 10;
 
     const tickets = await prisma.ticket.findMany({
-      where: { isArchived: false },
+      where: { ...(hasDateFilter ? dateFilter : {}) },
       include: {
         category: true,
         requester: true
@@ -297,11 +248,15 @@ router.get('/recent', async (req, res) => {
 
 router.get('/alerts', async (req, res) => {
   try {
+    const { startDate, endDate } = getDateRangeFromParams(req.query);
+    const dateFilter = buildDateFilter(startDate, endDate);
+    const hasDateFilter = startDate || endDate;
+
     const highPriorityTickets = await prisma.ticket.findMany({
       where: {
-        isArchived: false,
         prioridade: { in: ['alta', 'alta_critica', 'Alta', 'Crítica'] },
-        status: { notIn: ['todo'] }
+        status: { notIn: ['todo'] },
+        ...(hasDateFilter ? dateFilter : {})
       },
       include: {
         category: true,
@@ -320,23 +275,20 @@ router.get('/alerts', async (req, res) => {
 
 router.get('/evolution', async (req, res) => {
   try {
-    const { startDate, endDate } = getDateRange(req.query);
+    const { startDate, endDate } = getDateRangeFromParams(req.query);
     const days = parseInt(req.query.days as string) || 30;
-    
+
     const now = new Date();
-    let effectiveStartDate = startDate || new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
-    let effectiveEndDate = endDate || now;
-    
-    // Se há filtro específico, usa-o; caso contrário usa o período
+    const effectiveStartDate = startDate || new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
+    const effectiveEndDate = endDate || now;
     const hasDateFilter = startDate && endDate;
-    
+
     if (!hasDateFilter) {
-      effectiveStartDate = new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
+      effectiveStartDate.setTime(now.getTime() - days * 24 * 60 * 60 * 1000);
     }
 
     const tickets = await prisma.ticket.findMany({
       where: {
-        isArchived: false,
         createdAt: { gte: effectiveStartDate, lte: effectiveEndDate }
       },
       select: {
@@ -346,17 +298,16 @@ router.get('/evolution', async (req, res) => {
     });
 
     const dailyData: Record<string, { created: number; closed: number }> = {};
-    
-    // Gerar todas as datas no período
+
     const currentDate = new Date(effectiveStartDate);
     while (currentDate <= effectiveEndDate) {
-      const dateKey = currentDate.toISOString().split('T')[0];
+      const dateKey = toDateString(currentDate);
       dailyData[dateKey] = { created: 0, closed: 0 };
       currentDate.setDate(currentDate.getDate() + 1);
     }
 
     tickets.forEach(ticket => {
-      const dateKey = ticket.createdAt.toISOString().split('T')[0];
+      const dateKey = toDateString(ticket.createdAt);
       if (dailyData[dateKey]) {
         dailyData[dateKey].created++;
       }
@@ -371,7 +322,7 @@ router.get('/evolution', async (req, res) => {
     });
 
     historyEntries.forEach(entry => {
-      const dateKey = entry.date.toISOString().split('T')[0];
+      const dateKey = toDateString(entry.date);
       if (dailyData[dateKey]) {
         dailyData[dateKey].closed++;
       }
@@ -380,7 +331,7 @@ router.get('/evolution', async (req, res) => {
     const evolutionData = Object.entries(dailyData)
       .sort(([a], [b]) => a.localeCompare(b))
       .map(([date, data]) => ({
-        date: new Date(date).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }),
+        date: new Date(date + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }),
         created: data.created,
         closed: data.closed
       }));
@@ -392,28 +343,22 @@ router.get('/evolution', async (req, res) => {
   }
 });
 
-// Novo endpoint: Tempo médio de resolução
 router.get('/avg-resolution-time', async (req, res) => {
   try {
-    const { startDate, endDate } = getDateRange(req.query);
+    const { startDate, endDate } = getDateRangeFromParams(req.query);
     const days = parseInt(req.query.days as string) || 30;
-    
-    const now = new Date();
-    let effectiveStartDate = startDate || new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
-    let effectiveEndDate = endDate || now;
-    const hasDateFilter = startDate && endDate;
 
-    // Buscar tickets resolvidos no período
+    const now = new Date();
+    const effectiveStartDate = startDate || new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
+    const effectiveEndDate = endDate || now;
+
     const resolvedTickets = await prisma.ticket.findMany({
       where: {
-        isArchived: false,
-        status: { in: RESOLVED_STATUSES },
+        OR: [
+          { status: { in: RESOLVED_STATUSES } },
+          { isArchived: true }
+        ],
         createdAt: { gte: effectiveStartDate, lte: effectiveEndDate }
-      },
-      include: {
-        history: {
-          orderBy: { date: 'asc' }
-        }
       }
     });
 
@@ -421,15 +366,9 @@ router.get('/avg-resolution-time', async (req, res) => {
     let countResolved = 0;
 
     resolvedTickets.forEach(ticket => {
-      const closedHistory = ticket.history
-        .filter(h => RESOLVED_STATUSES.includes(h.to))
-        .pop();
-
-      if (closedHistory) {
-        const resolutionTime = Math.abs(closedHistory.date.getTime() - ticket.createdAt.getTime());
-        totalResolutionTime += resolutionTime;
-        countResolved++;
-      }
+      const resolutionTime = Math.abs(ticket.updatedAt.getTime() - ticket.createdAt.getTime());
+      totalResolutionTime += resolutionTime;
+      countResolved++;
     });
 
     const avgResolutionTime = countResolved > 0 ? totalResolutionTime / countResolved : 0;
@@ -438,8 +377,8 @@ router.get('/avg-resolution-time', async (req, res) => {
       avgResolutionTime: Math.round(avgResolutionTime / 1000 / 60),
       periodDays: days,
       ticketsAnalyzed: countResolved,
-      periodStart: effectiveStartDate.toISOString(),
-      periodEnd: effectiveEndDate.toISOString()
+      periodStart: toDateString(effectiveStartDate),
+      periodEnd: toDateString(effectiveEndDate)
     });
   } catch (error) {
     console.error('Error fetching avg resolution time:', error);
@@ -447,15 +386,14 @@ router.get('/avg-resolution-time', async (req, res) => {
   }
 });
 
-// Novo endpoint: Distribuição por técnico
 router.get('/technician-distribution', async (req, res) => {
   try {
-    const { startDate, endDate } = getDateRange(req.query);
+    const { startDate, endDate } = getDateRangeFromParams(req.query);
     const dateFilter = buildDateFilter(startDate, endDate);
     const hasDateFilter = startDate || endDate;
 
     const tickets = await prisma.ticket.findMany({
-      where: { isArchived: false, ...(hasDateFilter ? dateFilter : {}) },
+      where: { ...(hasDateFilter ? dateFilter : {}) },
       include: {
         requester: true
       }
@@ -464,13 +402,13 @@ router.get('/technician-distribution', async (req, res) => {
     const distribution: Record<string, number> = {};
 
     tickets.forEach(ticket => {
-      const technician = ticket.requester?.nome || 'Não atribuído';
-      distribution[technician] = (distribution[technician] || 0) + 1;
+      const name = ticket.requester?.nome || 'Não atribuído';
+      distribution[name] = (distribution[name] || 0) + 1;
     });
 
     const distributionArray = Object.entries(distribution)
-      .map(([technician, count]) => ({
-        technician,
+      .map(([name, count]) => ({
+        name,
         count,
         percentage: Math.round((count / tickets.length) * 100)
       }))
@@ -478,32 +416,27 @@ router.get('/technician-distribution', async (req, res) => {
 
     res.json(distributionArray);
   } catch (error) {
-    console.error('Error fetching technician distribution:', error);
-    res.status(500).json({ error: 'Failed to fetch technician distribution' });
+    console.error('Error fetching requester distribution:', error);
+    res.status(500).json({ error: 'Failed to fetch requester distribution' });
   }
 });
 
-// Novo endpoint: Cumprimento de SLA
 router.get('/sla-compliance', async (req, res) => {
   try {
-    const { startDate, endDate } = getDateRange(req.query);
+    const { startDate, endDate } = getDateRangeFromParams(req.query);
     const days = parseInt(req.query.days as string) || 30;
-    
-    const now = new Date();
-    let effectiveStartDate = startDate || new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
-    let effectiveEndDate = endDate || now;
 
-    // Buscar tickets resolvidos no período
+    const now = new Date();
+    const effectiveStartDate = startDate || new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
+    const effectiveEndDate = endDate || now;
+
     const resolvedTickets = await prisma.ticket.findMany({
       where: {
-        isArchived: false,
-        status: { in: RESOLVED_STATUSES },
+        OR: [
+          { status: { in: RESOLVED_STATUSES } },
+          { isArchived: true }
+        ],
         createdAt: { gte: effectiveStartDate, lte: effectiveEndDate }
-      },
-      include: {
-        history: {
-          orderBy: { date: 'asc' }
-        }
       }
     });
 
@@ -511,35 +444,29 @@ router.get('/sla-compliance', async (req, res) => {
     let totalAnalyzed = 0;
 
     resolvedTickets.forEach(ticket => {
-      const closedHistory = ticket.history
-        .filter(h => RESOLVED_STATUSES.includes(h.to))
-        .pop();
+      totalAnalyzed++;
+      const resolutionTimeMs = Math.abs(ticket.updatedAt.getTime() - ticket.createdAt.getTime());
+      const resolutionTimeHours = resolutionTimeMs / (1000 * 60 * 60);
 
-      if (closedHistory) {
-        totalAnalyzed++;
-        const resolutionTimeMs = Math.abs(closedHistory.date.getTime() - ticket.createdAt.getTime());
-        const resolutionTimeHours = resolutionTimeMs / (1000 * 60 * 60);
+      let slaHours = 0;
+      switch (ticket.prioridade?.toLowerCase()) {
+        case 'alta':
+        case 'crítica':
+          slaHours = 4;
+          break;
+        case 'média':
+        case 'media':
+          slaHours = 8;
+          break;
+        case 'baixa':
+          slaHours = 24;
+          break;
+        default:
+          slaHours = 8;
+      }
 
-        let slaHours = 0;
-        switch (ticket.prioridade?.toLowerCase()) {
-          case 'alta':
-          case 'crítica':
-            slaHours = 4;
-            break;
-          case 'média':
-          case 'media':
-            slaHours = 8;
-            break;
-          case 'baixa':
-            slaHours = 24;
-            break;
-          default:
-            slaHours = 8;
-        }
-
-        if (resolutionTimeHours <= slaHours) {
-          withinSla++;
-        }
+      if (resolutionTimeHours <= slaHours) {
+        withinSla++;
       }
     });
 
@@ -550,8 +477,8 @@ router.get('/sla-compliance', async (req, res) => {
       withinSla,
       totalAnalyzed,
       periodDays: days,
-      periodStart: effectiveStartDate.toISOString(),
-      periodEnd: effectiveEndDate.toISOString()
+      periodStart: toDateString(effectiveStartDate),
+      periodEnd: toDateString(effectiveEndDate)
     });
   } catch (error) {
     console.error('Error fetching SLA compliance:', error);
@@ -559,19 +486,17 @@ router.get('/sla-compliance', async (req, res) => {
   }
 });
 
-// Novo endpoint: Tempo médio de primeira resposta
 router.get('/avg-first-response-time', async (req, res) => {
   try {
-    const { startDate, endDate } = getDateRange(req.query);
+    const { startDate, endDate } = getDateRangeFromParams(req.query);
     const days = parseInt(req.query.days as string) || 30;
-    
+
     const now = new Date();
-    let effectiveStartDate = startDate || new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
-    let effectiveEndDate = endDate || now;
+    const effectiveStartDate = startDate || new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
+    const effectiveEndDate = endDate || now;
 
     const tickets = await prisma.ticket.findMany({
       where: {
-        isArchived: false,
         createdAt: { gte: effectiveStartDate, lte: effectiveEndDate }
       },
       include: {
@@ -600,8 +525,8 @@ router.get('/avg-first-response-time', async (req, res) => {
       avgFirstResponseTime: Math.round(avgFirstResponseTime / 1000 / 60),
       ticketsAnalyzed: countWithResponse,
       periodDays: days,
-      periodStart: effectiveStartDate.toISOString(),
-      periodEnd: effectiveEndDate.toISOString()
+      periodStart: toDateString(effectiveStartDate),
+      periodEnd: toDateString(effectiveEndDate)
     });
   } catch (error) {
     console.error('Error fetching avg first response time:', error);
@@ -609,19 +534,17 @@ router.get('/avg-first-response-time', async (req, res) => {
   }
 });
 
-// Novo endpoint: Tickets atrasados (baseado em SLA)
 router.get('/overdue-tickets', async (req, res) => {
   try {
-    const { startDate, endDate } = getDateRange(req.query);
+    const { startDate, endDate } = getDateRangeFromParams(req.query);
     const days = parseInt(req.query.days as string) || 30;
-    
+
     const now = new Date();
-    let effectiveStartDate = startDate || new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
-    let effectiveEndDate = endDate || now;
+    const effectiveStartDate = startDate || new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
+    const effectiveEndDate = endDate || now;
 
     const tickets = await prisma.ticket.findMany({
       where: {
-        isArchived: false,
         status: { notIn: RESOLVED_STATUSES },
         createdAt: { gte: effectiveStartDate, lte: effectiveEndDate }
       },
@@ -641,8 +564,8 @@ router.get('/overdue-tickets', async (req, res) => {
     };
 
     tickets.forEach(ticket => {
-      const ageInHours = (now.getTime() - new Date(ticket.createdAt).getTime()) / (1000 * 60 * 60);
-      
+      const ageInHours = (now.getTime() - ticket.createdAt.getTime()) / (1000 * 60 * 60);
+
       let slaHours = 8;
       const priority = ticket.prioridade?.toLowerCase();
       if (priority === 'alta' || priority === 'crítica') {
@@ -654,11 +577,11 @@ router.get('/overdue-tickets', async (req, res) => {
       if (ageInHours > slaHours) {
         overdueCount++;
         if (priority === 'alta' || priority === 'crítica') {
-          overdueByPriority['Alta/Crítica']++;
+          overdueByPriority['Alta/Crítica'] = (overdueByPriority['Alta/Crítica'] ?? 0) + 1;
         } else if (priority === 'média' || priority === 'media') {
-          overdueByPriority['Média']++;
+          overdueByPriority['Média'] = (overdueByPriority['Média'] ?? 0) + 1;
         } else {
-          overdueByPriority['Baixa']++;
+          overdueByPriority['Baixa'] = (overdueByPriority['Baixa'] ?? 0) + 1;
         }
       }
     });
@@ -676,20 +599,18 @@ router.get('/overdue-tickets', async (req, res) => {
   }
 });
 
-// Novo endpoint: Taxa de criação vs resolução
 router.get('/creation-vs-resolution', async (req, res) => {
   try {
-    const { startDate, endDate } = getDateRange(req.query);
+    const { startDate, endDate } = getDateRangeFromParams(req.query);
     const days = parseInt(req.query.days as string) || 30;
-    
+
     const now = new Date();
-    let effectiveStartDate = startDate || new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
-    let effectiveEndDate = endDate || now;
+    const effectiveStartDate = startDate || new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
+    const effectiveEndDate = endDate || now;
 
     const [created, resolved] = await Promise.all([
       prisma.ticket.count({
         where: {
-          isArchived: false,
           createdAt: { gte: effectiveStartDate, lte: effectiveEndDate }
         }
       }),
@@ -710,8 +631,8 @@ router.get('/creation-vs-resolution', async (req, res) => {
       rate,
       status,
       periodDays: days,
-      periodStart: effectiveStartDate.toISOString(),
-      periodEnd: effectiveEndDate.toISOString()
+      periodStart: toDateString(effectiveStartDate),
+      periodEnd: toDateString(effectiveEndDate)
     });
   } catch (error) {
     console.error('Error fetching creation vs resolution:', error);
@@ -719,18 +640,16 @@ router.get('/creation-vs-resolution', async (req, res) => {
   }
 });
 
-// Novo endpoint: Idade média dos tickets ativos
 router.get('/ticket-age', async (req, res) => {
   try {
-    const { startDate, endDate } = getDateRange(req.query);
-    
+    const { startDate, endDate } = getDateRangeFromParams(req.query);
+
     const now = new Date();
     const effectiveStartDate = startDate || new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
     const effectiveEndDate = endDate || now;
 
     const tickets = await prisma.ticket.findMany({
       where: {
-        isArchived: false,
         status: { notIn: RESOLVED_STATUSES },
         createdAt: { gte: effectiveStartDate, lte: effectiveEndDate }
       },
@@ -741,7 +660,7 @@ router.get('/ticket-age', async (req, res) => {
 
     let totalAge = 0;
     tickets.forEach(ticket => {
-      totalAge += (now.getTime() - new Date(ticket.createdAt).getTime());
+      totalAge += (now.getTime() - ticket.createdAt.getTime());
     });
 
     const avgAgeHours = tickets.length > 0 ? totalAge / tickets.length / (1000 * 60 * 60) : 0;
@@ -750,8 +669,8 @@ router.get('/ticket-age', async (req, res) => {
       avgAgeHours: Math.round(avgAgeHours),
       avgAgeDays: Math.round(avgAgeHours / 24),
       activeTickets: tickets.length,
-      periodStart: effectiveStartDate.toISOString(),
-      periodEnd: effectiveEndDate.toISOString()
+      periodStart: toDateString(effectiveStartDate),
+      periodEnd: toDateString(effectiveEndDate)
     });
   } catch (error) {
     console.error('Error fetching ticket age:', error);
@@ -759,19 +678,17 @@ router.get('/ticket-age', async (req, res) => {
   }
 });
 
-// Novo endpoint: Tempo médio por categoria
 router.get('/resolution-time-by-category', async (req, res) => {
   try {
-    const { startDate, endDate } = getDateRange(req.query);
+    const { startDate, endDate } = getDateRangeFromParams(req.query);
     const days = parseInt(req.query.days as string) || 30;
-    
+
     const now = new Date();
-    let effectiveStartDate = startDate || new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
-    let effectiveEndDate = endDate || now;
+    const effectiveStartDate = startDate || new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
+    const effectiveEndDate = endDate || now;
 
     const tickets = await prisma.ticket.findMany({
       where: {
-        isArchived: false,
         status: { in: RESOLVED_STATUSES },
         createdAt: { gte: effectiveStartDate, lte: effectiveEndDate }
       },
@@ -787,11 +704,11 @@ router.get('/resolution-time-by-category', async (req, res) => {
 
     tickets.forEach(ticket => {
       const categoryName = ticket.category?.descricao || 'Sem categoria';
-      const closedHistory = ticket.history.filter(h => RESOLVED_STATUSES.includes(h.to)).pop();
-      
+      const closedHistory = [...ticket.history].filter(h => RESOLVED_STATUSES.includes(h.to)).pop();
+
       if (closedHistory) {
         const resolutionTime = Math.abs(closedHistory.date.getTime() - ticket.createdAt.getTime());
-        
+
         if (!categoryTimes[categoryName]) {
           categoryTimes[categoryName] = { total: 0, count: 0 };
         }
@@ -811,8 +728,8 @@ router.get('/resolution-time-by-category', async (req, res) => {
     res.json({
       categories: result,
       periodDays: days,
-      periodStart: effectiveStartDate.toISOString(),
-      periodEnd: effectiveEndDate.toISOString()
+      periodStart: toDateString(effectiveStartDate),
+      periodEnd: toDateString(effectiveEndDate)
     });
   } catch (error) {
     console.error('Error fetching resolution time by category:', error);
@@ -820,19 +737,17 @@ router.get('/resolution-time-by-category', async (req, res) => {
   }
 });
 
-// Novo endpoint: Equipamentos mais problemáticos
 router.get('/equipment-issues', async (req, res) => {
   try {
-    const { startDate, endDate } = getDateRange(req.query);
+    const { startDate, endDate } = getDateRangeFromParams(req.query);
     const days = parseInt(req.query.days as string) || 30;
-    
+
     const now = new Date();
-    let effectiveStartDate = startDate || new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
-    let effectiveEndDate = endDate || now;
+    const effectiveStartDate = startDate || new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
+    const effectiveEndDate = endDate || now;
 
     const tickets = await prisma.ticket.findMany({
       where: {
-        isArchived: false,
         equipmentId: { not: null },
         createdAt: { gte: effectiveStartDate, lte: effectiveEndDate }
       },
@@ -860,8 +775,8 @@ router.get('/equipment-issues', async (req, res) => {
     res.json({
       topEquipment: result,
       periodDays: days,
-      periodStart: effectiveStartDate.toISOString(),
-      periodEnd: effectiveEndDate.toISOString()
+      periodStart: toDateString(effectiveStartDate),
+      periodEnd: toDateString(effectiveEndDate)
     });
   } catch (error) {
     console.error('Error fetching equipment issues:', error);
@@ -869,19 +784,17 @@ router.get('/equipment-issues', async (req, res) => {
   }
 });
 
-// Novo endpoint: Correlação categoria × unidade
 router.get('/category-by-unit', async (req, res) => {
   try {
-    const { startDate, endDate } = getDateRange(req.query);
+    const { startDate, endDate } = getDateRangeFromParams(req.query);
     const days = parseInt(req.query.days as string) || 30;
-    
+
     const now = new Date();
-    let effectiveStartDate = startDate || new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
-    let effectiveEndDate = endDate || now;
+    const effectiveStartDate = startDate || new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
+    const effectiveEndDate = endDate || now;
 
     const tickets = await prisma.ticket.findMany({
       where: {
-        isArchived: false,
         createdAt: { gte: effectiveStartDate, lte: effectiveEndDate }
       },
       include: {
@@ -895,7 +808,7 @@ router.get('/category-by-unit', async (req, res) => {
     tickets.forEach(ticket => {
       const unit = ticket.requester?.unidade || 'Não especificada';
       const category = ticket.category?.descricao || 'Sem categoria';
-      
+
       if (!correlation[unit]) {
         correlation[unit] = {};
       }
@@ -915,8 +828,8 @@ router.get('/category-by-unit', async (req, res) => {
     res.json({
       correlation: result,
       periodDays: days,
-      periodStart: effectiveStartDate.toISOString(),
-      periodEnd: effectiveEndDate.toISOString()
+      periodStart: toDateString(effectiveStartDate),
+      periodEnd: toDateString(effectiveEndDate)
     });
   } catch (error) {
     console.error('Error fetching category by unit:', error);
@@ -924,7 +837,6 @@ router.get('/category-by-unit', async (req, res) => {
   }
 });
 
-// Novo endpoint: Tendência de problemas por categoria
 router.get('/category-trend', async (req, res) => {
   try {
     const days = parseInt(req.query.days as string) || 30;
@@ -933,7 +845,6 @@ router.get('/category-trend', async (req, res) => {
 
     const tickets = await prisma.ticket.findMany({
       where: {
-        isArchived: false,
         createdAt: { gte: startDate }
       },
       include: {
@@ -942,7 +853,7 @@ router.get('/category-trend', async (req, res) => {
     });
 
     const categoryCount: Record<string, number> = {};
-    
+
     tickets.forEach(ticket => {
       const category = ticket.category?.descricao || 'Sem categoria';
       categoryCount[category] = (categoryCount[category] || 0) + 1;
@@ -968,20 +879,18 @@ router.get('/category-trend', async (req, res) => {
   }
 });
 
-// Novo endpoint: Eficiência operacional
 router.get('/operational-efficiency', async (req, res) => {
   try {
-    const { startDate, endDate } = getDateRange(req.query);
+    const { startDate, endDate } = getDateRangeFromParams(req.query);
     const days = parseInt(req.query.days as string) || 30;
-    
+
     const now = new Date();
-    let effectiveStartDate = startDate || new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
-    let effectiveEndDate = endDate || now;
+    const effectiveStartDate = startDate || new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
+    const effectiveEndDate = endDate || now;
 
     const [created, resolved] = await Promise.all([
       prisma.ticket.count({
         where: {
-          isArchived: false,
           createdAt: { gte: effectiveStartDate, lte: effectiveEndDate }
         }
       }),
@@ -994,7 +903,7 @@ router.get('/operational-efficiency', async (req, res) => {
     ]);
 
     const efficiency = created > 0 ? Math.round((resolved / created) * 100) : 0;
-    
+
     let status: string;
     if (efficiency >= 100) status = 'excellent';
     else if (efficiency >= 80) status = 'good';
@@ -1007,8 +916,8 @@ router.get('/operational-efficiency', async (req, res) => {
       resolved,
       status,
       periodDays: days,
-      periodStart: effectiveStartDate.toISOString(),
-      periodEnd: effectiveEndDate.toISOString()
+      periodStart: toDateString(effectiveStartDate),
+      periodEnd: toDateString(effectiveEndDate)
     });
   } catch (error) {
     console.error('Error fetching operational efficiency:', error);
@@ -1016,19 +925,17 @@ router.get('/operational-efficiency', async (req, res) => {
   }
 });
 
-// Novo endpoint: Tempo médio por status
 router.get('/avg-time-by-status', async (req, res) => {
   try {
-    const { startDate, endDate } = getDateRange(req.query);
+    const { startDate, endDate } = getDateRangeFromParams(req.query);
     const days = parseInt(req.query.days as string) || 30;
-    
+
     const now = new Date();
-    let effectiveStartDate = startDate || new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
-    let effectiveEndDate = endDate || now;
+    const effectiveStartDate = startDate || new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
+    const effectiveEndDate = endDate || now;
 
     const tickets = await prisma.ticket.findMany({
       where: {
-        isArchived: false,
         createdAt: { gte: effectiveStartDate, lte: effectiveEndDate }
       },
       include: {
@@ -1046,17 +953,17 @@ router.get('/avg-time-by-status', async (req, res) => {
 
     tickets.forEach(ticket => {
       let lastTime = ticket.createdAt;
-      
+
       ticket.history.forEach(h => {
-        const duration = new Date(h.date).getTime() - lastTime.getTime();
+        const duration = h.date.getTime() - lastTime.getTime();
         const fromStatus = h.from || 'backlog';
-        
+
         if (statusTimes[fromStatus]) {
           statusTimes[fromStatus].total += duration;
           statusTimes[fromStatus].count++;
         }
-        
-        lastTime = new Date(h.date);
+
+        lastTime = h.date;
       });
     });
 
@@ -1069,12 +976,171 @@ router.get('/avg-time-by-status', async (req, res) => {
     res.json({
       byStatus: result,
       periodDays: days,
-      periodStart: effectiveStartDate.toISOString(),
-      periodEnd: effectiveEndDate.toISOString()
+      periodStart: toDateString(effectiveStartDate),
+      periodEnd: toDateString(effectiveEndDate)
     });
   } catch (error) {
     console.error('Error fetching avg time by status:', error);
     res.status(500).json({ error: 'Failed to fetch average time by status' });
+  }
+});
+
+// ─── Em Aberto (apenas chamados não arquivados) ───
+
+router.get('/active-summary', async (req, res) => {
+  try {
+    const { startDate, endDate } = getDateRangeFromParams(req.query);
+    const dateFilter = buildDateFilter(startDate, endDate, 'createdAt');
+    const hasDateFilter = startDate || endDate;
+
+    const baseWhere = {
+      isArchived: false,
+      ...(hasDateFilter ? dateFilter : {})
+    } as const;
+
+    const now = new Date();
+
+    const [
+      totalActive,
+      inProgress,
+      backlog,
+      criticalOpen,
+      activeTickets,
+      alerts
+    ] = await Promise.all([
+      prisma.ticket.count({ where: baseWhere }),
+      prisma.ticket.count({
+        where: { ...baseWhere, status: { notIn: RESOLVED_STATUSES } }
+      }),
+      prisma.ticket.count({
+        where: {
+          ...baseWhere,
+          status: 'backlog',
+          createdAt: {
+            ...(hasDateFilter ? { gte: startDate!, lte: endDate! } : {}),
+            lt: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000)
+          }
+        }
+      }),
+      prisma.ticket.count({
+        where: {
+          ...baseWhere,
+          prioridade: { in: ['Alta', 'Crítica', 'alta', 'critica'] },
+          status: { notIn: RESOLVED_STATUSES }
+        }
+      }),
+      prisma.ticket.findMany({
+        where: { ...baseWhere, status: { notIn: RESOLVED_STATUSES } },
+        select: {
+          id: true,
+          prioridade: true,
+          createdAt: true,
+          status: true
+        }
+      }),
+      prisma.ticket.findMany({
+        where: {
+          ...baseWhere,
+          prioridade: { in: ['alta', 'alta_critica', 'Alta', 'Crítica'] },
+          status: { notIn: ['todo'] }
+        },
+        include: {
+          category: true,
+          requester: true
+        },
+        orderBy: { createdAt: 'asc' },
+        take: 10
+      })
+    ]);
+
+    let overdueCount = 0;
+    activeTickets.forEach(ticket => {
+      const ageInHours = (now.getTime() - ticket.createdAt.getTime()) / (1000 * 60 * 60);
+      let slaHours = 8;
+      const priority = ticket.prioridade?.toLowerCase();
+      if (priority === 'alta' || priority === 'crítica') slaHours = 4;
+      else if (priority === 'baixa') slaHours = 24;
+      if (ageInHours > slaHours) overdueCount++;
+    });
+
+    const overdueRate = activeTickets.length > 0
+      ? Math.round((overdueCount / activeTickets.length) * 100)
+      : 0;
+
+    const chartTickets = await prisma.ticket.findMany({
+      where: { ...baseWhere },
+      include: {
+        category: true,
+        requester: true
+      }
+    });
+
+    const statusCount: Record<string, number> = { backlog: 0, pending: 0, todo: 0 };
+    const priorityCount: Record<string, number> = { 'Alta': 0, 'Crítica': 0, 'Média': 0, 'Media': 0, 'Baixa': 0 };
+    const categoryCount: Record<string, number> = {};
+    const departmentCount: Record<string, number> = {};
+
+    chartTickets.forEach(ticket => {
+      const status = ticket.status || 'backlog';
+      if (status in statusCount) statusCount[status] = (statusCount[status] ?? 0) + 1;
+      else statusCount['backlog'] = (statusCount['backlog'] ?? 0) + 1;
+
+      const priority = ticket.prioridade || 'Média';
+      if (priority in priorityCount) priorityCount[priority] = (priorityCount[priority] ?? 0) + 1;
+      else priorityCount['Média'] = (priorityCount['Média'] ?? 0) + 1;
+
+      if (ticket.category?.descricao) {
+        categoryCount[ticket.category.descricao] = (categoryCount[ticket.category.descricao] || 0) + 1;
+      }
+      if (ticket.departamento) {
+        departmentCount[ticket.departamento] = (departmentCount[ticket.departamento] || 0) + 1;
+      }
+    });
+
+    const statusData = [
+      { name: 'Para Fazer', value: statusCount.backlog, color: '#f59e0b' },
+      { name: 'Em Andamento', value: statusCount.pending, color: '#3b82f6' },
+      { name: 'Aguardando Cliente', value: statusCount.todo, color: '#ef4444' },
+    ];
+
+    const priorityData = [
+      { name: 'Alta/Crítica', value: (priorityCount['Alta'] || 0) + (priorityCount['Crítica'] || 0), color: '#ef4444' },
+      { name: 'Média', value: (priorityCount['Média'] || 0) + (priorityCount['Media'] || 0), color: '#f59e0b' },
+      { name: 'Baixa', value: priorityCount['Baixa'] || 0, color: '#22c55e' }
+    ];
+
+    const categoryData = Object.entries(categoryCount)
+      .map(([name, value], idx) => ({
+        name,
+        value,
+        color: CATEGORY_COLORS[idx % CATEGORY_COLORS.length]!
+      }))
+      .sort((a, b) => b.value - a.value)
+      .slice(0, 8);
+
+    const departmentData = Object.entries(departmentCount)
+      .map(([name, value]) => ({ name, value }))
+      .sort((a, b) => b.value - a.value)
+      .slice(0, 8);
+
+    res.json({
+      kpis: {
+        totalActive,
+        inProgress,
+        backlog,
+        criticalOpen,
+        overdueCount,
+        overdueRate
+      },
+      status: statusData,
+      priority: priorityData,
+      category: categoryData,
+      department: departmentData,
+      alerts
+    });
+  } catch (error) {
+    console.error('Error fetching active summary:', error);
+    res.status(500).json({ error: 'Failed to fetch active summary' });
   }
 });
 

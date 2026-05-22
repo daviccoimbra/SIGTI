@@ -11,13 +11,20 @@ export interface DateRangeOption {
   getDates: () => DateRange;
 }
 
+function toLocalDateString(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
 export const dateRangePresets: DateRangeOption[] = [
   {
     label: 'Hoje',
     value: 'today',
     getDates: () => {
       const today = new Date();
-      const dateStr = today.toISOString().split('T')[0];
+      const dateStr = toLocalDateString(today);
       return { startDate: dateStr, endDate: dateStr };
     }
   },
@@ -27,7 +34,7 @@ export const dateRangePresets: DateRangeOption[] = [
     getDates: () => {
       const yesterday = new Date();
       yesterday.setDate(yesterday.getDate() - 1);
-      const dateStr = yesterday.toISOString().split('T')[0];
+      const dateStr = toLocalDateString(yesterday);
       return { startDate: dateStr, endDate: dateStr };
     }
   },
@@ -39,8 +46,8 @@ export const dateRangePresets: DateRangeOption[] = [
       const start = new Date();
       start.setDate(start.getDate() - 7);
       return {
-        startDate: start.toISOString().split('T')[0],
-        endDate: end.toISOString().split('T')[0]
+        startDate: toLocalDateString(start),
+        endDate: toLocalDateString(end)
       };
     }
   },
@@ -52,8 +59,8 @@ export const dateRangePresets: DateRangeOption[] = [
       const start = new Date();
       start.setDate(start.getDate() - 30);
       return {
-        startDate: start.toISOString().split('T')[0],
-        endDate: end.toISOString().split('T')[0]
+        startDate: toLocalDateString(start),
+        endDate: toLocalDateString(end)
       };
     }
   },
@@ -64,8 +71,8 @@ export const dateRangePresets: DateRangeOption[] = [
       const now = new Date();
       const start = new Date(now.getFullYear(), now.getMonth(), 1);
       return {
-        startDate: start.toISOString().split('T')[0],
-        endDate: now.toISOString().split('T')[0]
+        startDate: toLocalDateString(start),
+        endDate: toLocalDateString(now)
       };
     }
   },
@@ -77,8 +84,8 @@ export const dateRangePresets: DateRangeOption[] = [
       const start = new Date(now.getFullYear(), now.getMonth() - 1, 1);
       const end = new Date(now.getFullYear(), now.getMonth(), 0);
       return {
-        startDate: start.toISOString().split('T')[0],
-        endDate: end.toISOString().split('T')[0]
+        startDate: toLocalDateString(start),
+        endDate: toLocalDateString(end)
       };
     }
   },

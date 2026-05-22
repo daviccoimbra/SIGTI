@@ -51,15 +51,18 @@ export function DateRangePicker({
     setIsOpen(false);
   };
 
+  const formatDisplayDate = (dateStr: string) => {
+    const [year, month, day] = dateStr.split('-').map(Number);
+    return `${String(day).padStart(2, '0')}/${String(month).padStart(2, '0')}/${year}`;
+  };
+
   const getDisplayText = () => {
     if (selectedPreset === 'custom') {
       if (dateRange.startDate && dateRange.endDate) {
-        const start = new Date(dateRange.startDate).toLocaleDateString('pt-BR');
-        const end = new Date(dateRange.endDate).toLocaleDateString('pt-BR');
-        return `${start} - ${end}`;
+        return `${formatDisplayDate(dateRange.startDate)} - ${formatDisplayDate(dateRange.endDate)}`;
       }
-      if (dateRange.startDate) return `De ${new Date(dateRange.startDate).toLocaleDateString('pt-BR')}`;
-      if (dateRange.endDate) return `Até ${new Date(dateRange.endDate).toLocaleDateString('pt-BR')}`;
+      if (dateRange.startDate) return `De ${formatDisplayDate(dateRange.startDate)}`;
+      if (dateRange.endDate) return `Até ${formatDisplayDate(dateRange.endDate)}`;
       return 'Personalizado';
     }
     const preset = dateRangePresets.find(p => p.value === selectedPreset);

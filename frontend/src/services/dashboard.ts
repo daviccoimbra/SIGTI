@@ -70,7 +70,7 @@ export interface AvgFirstResponseTimeData {
 }
 
 export interface TechnicianDistributionData {
-  technician: string;
+  name: string;
   count: number;
   percentage: number;
 }
@@ -182,6 +182,24 @@ export interface AvgTimeByStatusData {
   periodEnd?: string;
 }
 
+export interface ActiveKpis {
+  totalActive: number;
+  inProgress: number;
+  backlog: number;
+  criticalOpen: number;
+  overdueCount: number;
+  overdueRate: number;
+}
+
+export interface ActiveSummaryData {
+  kpis: ActiveKpis;
+  status: ChartData[];
+  priority: ChartData[];
+  category: ChartData[];
+  department: { name: string; value: number }[];
+  alerts: TicketData[];
+}
+
 const buildQueryString = (params: QueryParams): string => {
   const query = new URLSearchParams(params).toString();
   return query ? `?${query}` : '';
@@ -241,4 +259,7 @@ export const dashboardService = {
   
   getAvgTimeByStatus: (params: QueryParams = {}) => 
     api.get<AvgTimeByStatusData>(`/dashboard/avg-time-by-status${buildQueryString(params)}`),
+
+  getActiveSummary: (params: QueryParams = {}) =>
+    api.get<ActiveSummaryData>(`/dashboard/active-summary${buildQueryString(params)}`),
 };

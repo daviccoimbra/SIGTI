@@ -98,7 +98,7 @@ export function TechnicianDistributionChart({ isLoading = false, queryParams = {
           return (
             <div key={idx} className="group/item">
               <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-medium text-slate-700 truncate max-w-[140px]">{tech.technician}</span>
+                <span className="text-sm font-medium text-slate-700 truncate max-w-[140px]">{tech.name}</span>
                 <span className="text-xs text-slate-500">{tech.count} ({tech.percentage}%)</span>
               </div>
               <div className="h-2.5 bg-slate-100 rounded-full overflow-hidden">

@@ -7,36 +7,30 @@ interface DashboardChartsProps {
 }
 
 const STATUS_COLORS: Record<string, string> = {
-  'Para Fazer': '#6b7280',
+  'Para Fazer': '#f59e0b',
   'Em Andamento': '#3b82f6',
-  'Aguardando Cliente': '#8b5cf6',
+  'Aguardando Cliente': '#ef4444',
+  'Finalizados': '#22c55e',
 };
 
 function SimplePieChart({ data, colors }: { data: { name: string; value: number }[]; colors: Record<string, string> }) {
   const total = data.reduce((sum, item) => sum + item.value, 0);
   if (total === 0) return <p className="text-gray-400 text-center py-8">Sem dados</p>;
 
-  let cumulative = 0;
+  const segments = data.filter(s => s.value > 0);
+  let cumPct = 0;
+  const stops = segments.map(s => {
+    const pct = (s.value / total) * 100;
+    const color = colors[s.name] || '#6b7280';
+    const start = cumPct;
+    cumPct += pct;
+    return `${color} ${start}% ${cumPct}%`;
+  });
+  const conic = `conic-gradient(${stops.join(', ')})`;
+
   return (
     <div className="flex items-center justify-center gap-8">
-      <div className="relative w-32 h-32 rounded-full" style={{ background: 'conic-gradient(#e5e7eb 0deg 360deg)' }}>
-        {data.map((item, index) => {
-          if (item.value === 0) return null;
-          const percentage = (item.value / total) * 100;
-          const degrees = (percentage / 100) * 360;
-          const start = cumulative;
-          cumulative += degrees;
-          const color = colors[item.name] || '#6b7280';
-          return (
-            <div
-              key={index}
-              className="absolute inset-0 rounded-full"
-              style={{
-                background: `conic-gradient(${color} ${start}deg ${start + degrees}deg, transparent ${start + degrees}deg)`,
-              }}
-            />
-          );
-        })}
+      <div className="relative w-32 h-32 rounded-full" style={{ background: conic }}>
       </div>
       <div className="space-y-2">
         {data.map((item, index) => (

@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { 
-  HiOutlineChartPie, 
-  HiOutlineCube, 
-  HiOutlinePresentationChartLine, 
+import {
+  HiOutlineFire,
+  HiOutlineChartPie,
+  HiOutlineCube,
+  HiOutlinePresentationChartLine,
   HiOutlineSparkles
 } from 'react-icons/hi2';
 import { HiOutlineTrendingUp } from 'react-icons/hi';
@@ -13,6 +14,7 @@ import { dashboardService } from '../../services/dashboard';
 import { useDateRange } from '../../hooks/useDateRange';
 import { DateRangePicker } from '../../components/DateRangePicker';
 
+import { ActiveOverview } from './components/ActiveOverview';
 import { KpiCards } from './components/KpiCards';
 import { DashboardCharts } from './components/DashboardCharts';
 import { PriorityAlerts } from './components/PriorityAlerts';
@@ -20,7 +22,7 @@ import { AverageResolutionTimeCard } from './components/AverageResolutionTimeCar
 import { SLAComplianceIndicator } from './components/SLAComplianceIndicator';
 import { TechnicianDistributionChart } from './components/TechnicianDistributionChart';
 
-type TabId = 'geral' | 'operacional' | 'analises' | 'avancado';
+type TabId = 'em-aberto' | 'geral' | 'operacional' | 'analises' | 'avancado';
 
 interface Tab {
   id: TabId;
@@ -30,34 +32,40 @@ interface Tab {
 }
 
 const tabs: Tab[] = [
-  { 
-    id: 'geral', 
-    label: 'Geral', 
+  {
+    id: 'em-aberto',
+    label: 'Em Aberto',
+    icon: <HiOutlineFire className="w-5 h-5" />,
+    description: 'Indicadores dos chamados ativos'
+  },
+  {
+    id: 'geral',
+    label: 'Geral',
     icon: <HiOutlineChartPie className="w-5 h-5" />,
-    description: 'Visão geral dos indicadores'
+    description: 'Visão histórica dos indicadores'
   },
-  { 
-    id: 'operacional', 
-    label: 'Operacional', 
+  {
+    id: 'operacional',
+    label: 'Operacional',
     icon: <HiOutlineCube className="w-5 h-5" />,
-    description: 'Performance e eficiência'
+    description: 'Performance e eficiência (histórico)'
   },
-  { 
-    id: 'analises', 
-    label: 'Análises', 
+  {
+    id: 'analises',
+    label: 'Análises',
     icon: <HiOutlinePresentationChartLine className="w-5 h-5" />,
-    description: 'Distribuição e categorização'
+    description: 'Distribuição e categorização (histórico)'
   },
-  { 
-    id: 'avancado', 
-    label: 'Avançado', 
+  {
+    id: 'avancado',
+    label: 'Avançado',
     icon: <HiOutlineSparkles className="w-5 h-5" />,
-    description: 'Indicadores especializados'
+    description: 'Indicadores especializados (histórico)'
   },
 ];
 
 const Dashboard = () => {
-  const [activeTab, setActiveTab] = useState<TabId>('geral');
+  const [activeTab, setActiveTab] = useState<TabId>('em-aberto');
   const [isVisible, setIsVisible] = useState(false);
   const { dateRange, selectedPreset, setPreset, setCustomDates, queryParams } = useDateRange('30days');
 
@@ -68,28 +76,34 @@ const Dashboard = () => {
   const { data: kpis, isLoading: kpisLoading } = useQuery({
     queryKey: ['dashboard-kpis', queryParams],
     queryFn: () => dashboardService.getKPIs(queryParams).then(res => res.data),
-    refetchInterval: 30000,
+    refetchInterval: 10000,
   });
 
   const { data: charts, isLoading: chartsLoading } = useQuery({
     queryKey: ['dashboard-charts', queryParams],
     queryFn: () => dashboardService.getCharts(queryParams).then(res => res.data),
+    refetchInterval: 10000,
   });
 
   const { data: evolution, isLoading: evolutionLoading } = useQuery({
     queryKey: ['dashboard-evolution', queryParams],
     queryFn: () => dashboardService.getEvolution(queryParams).then(res => res.data),
+    refetchInterval: 10000,
   });
 
   const { data: alerts, isLoading: alertsLoading } = useQuery({
     queryKey: ['dashboard-alerts', queryParams],
     queryFn: () => dashboardService.getAlerts(queryParams).then(res => res.data),
+    refetchInterval: 10000,
   });
 
   const isLoading = kpisLoading || chartsLoading || evolutionLoading || alertsLoading;
 
   const renderTabContent = () => {
     switch (activeTab) {
+      case 'em-aberto':
+        return <ActiveOverview queryParams={queryParams} />;
+
       case 'geral':
         return (
           <div className="space-y-8">
@@ -105,7 +119,7 @@ const Dashboard = () => {
             />
           </div>
         );
-      
+
       case 'operacional':
         return (
           <div className="space-y-8">
@@ -138,7 +152,7 @@ const Dashboard = () => {
             </div>
           </div>
         );
-      
+
       case 'analises':
         return (
           <div className="space-y-8">
@@ -163,7 +177,7 @@ const Dashboard = () => {
                           <span className="text-xs text-slate-500">{item.value}</span>
                         </div>
                         <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
-                          <div 
+                          <div
                             className="h-full bg-gradient-to-r from-indigo-500 to-indigo-600 rounded-full transition-all duration-700 ease-out group-hover:from-indigo-400 group-hover:to-indigo-500"
                             style={{ width: `${(item.value / Math.max(...charts.unit.map(u => u.value))) * 100}%` }}
                           />
@@ -190,7 +204,7 @@ const Dashboard = () => {
                           <span className="text-xs text-slate-500">{item.value}</span>
                         </div>
                         <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
-                          <div 
+                          <div
                             className="h-full bg-gradient-to-r from-emerald-500 to-emerald-600 rounded-full transition-all duration-700 ease-out group-hover:from-emerald-400 group-hover:to-emerald-500"
                             style={{ width: `${(item.value / Math.max(...charts.department.map(d => d.value))) * 100}%` }}
                           />
@@ -205,7 +219,7 @@ const Dashboard = () => {
             </div>
           </div>
         );
-      
+
       case 'avancado':
         return (
           <div className="space-y-8">
@@ -220,7 +234,7 @@ const Dashboard = () => {
             />
           </div>
         );
-      
+
       default:
         return null;
     }
@@ -246,7 +260,7 @@ const Dashboard = () => {
                 <MdDashboard className="w-6 h-6 text-white" />
               </div>
               <div>
-                <h1 
+                <h1
                   className="text-2xl font-bold text-slate-800 tracking-tight"
                   style={{ fontFamily: 'var(--font-display)' }}
                 >
@@ -257,7 +271,7 @@ const Dashboard = () => {
                 </p>
               </div>
             </div>
-            
+
             <div className="flex items-center gap-4">
               <DateRangePicker
                 dateRange={dateRange}
@@ -308,7 +322,11 @@ const Dashboard = () => {
           <span>{activeTabData?.description}</span>
         </div>
 
-        {isLoading ? (
+        {activeTab === 'em-aberto' ? (
+          <div className={`transition-all duration-500 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
+            <ActiveOverview queryParams={queryParams} />
+          </div>
+        ) : isLoading ? (
           <div className="flex items-center justify-center py-24">
             <div className="flex flex-col items-center gap-4">
               <div className="relative">

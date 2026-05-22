@@ -49,8 +49,13 @@ export function AverageResolutionTimeCard({ isLoading = false, queryParams = {} 
 
   if (!data) return null;
 
+  const formatDateStr = (dateStr: string) => {
+    const [year, month, day] = dateStr.split('-').map(Number);
+    return `${String(day).padStart(2, '0')}/${String(month).padStart(2, '0')}/${year}`;
+  };
+
   const periodLabel = data.periodStart 
-    ? `${new Date(data.periodStart).toLocaleDateString('pt-BR')} - ${new Date(data.periodEnd || '').toLocaleDateString('pt-BR')}`
+    ? `${formatDateStr(data.periodStart)} - ${formatDateStr(data.periodEnd || '')}`
     : `Últimos ${data.periodDays} dias`;
 
   const getTimeInterpretation = (minutes: number) => {
