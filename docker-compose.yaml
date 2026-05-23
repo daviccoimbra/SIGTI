@@ -28,8 +28,8 @@ services:
         condition: service_healthy
     env_file:
       - .env
-    ports:
-      - "3001:3001"
+    expose:
+      - "3001"
     volumes:
       - ./backend:/app
       - /app/node_modules

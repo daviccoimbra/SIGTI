@@ -8,6 +8,8 @@ import equipmentRoutes from './routes/equipmentRoutes.js';
 import authRoutes from './routes/authRoutes.js';
 import userRoutes from './routes/userRoutes.js';
 import dashboardRoutes from './routes/dashboardRoutes.js';
+import path from 'path'
+import fs from 'fs'
 
 import cookieParser from 'cookie-parser';
 
@@ -29,7 +31,6 @@ app.use(cors({
 }));
 app.use(express.json());
 app.use(cookieParser());
-app.use('/archive', express.static('archive'));
 
 // Rotas de autenticação (públicas e protegidas)
 app.use('/api/auth', authRoutes);
@@ -45,3 +46,50 @@ app.use('/api/dashboard', dashboardRoutes);
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
 });
+
+app.get(
+  '/api/archive/:file',
+  (req, res) => {
+    try {
+      const file =
+        decodeURIComponent(
+          req.params.file
+        )
+
+      const filePath =
+        path.join(
+          process.cwd(),
+          'archive',
+          file
+        )
+
+      console.log(filePath)
+
+      if (
+        !fs.existsSync(
+          filePath
+        )
+      ) {
+        return res
+          .status(404)
+          .json({
+            error:
+              'Arquivo não encontrado',
+          })
+      }
+
+      return res.sendFile(
+        filePath
+      )
+    } catch (err) {
+      console.error(err)
+
+      return res
+        .status(500)
+        .json({
+          error:
+            'Erro interno',
+          })
+    }
+  }
+)

@@ -1,5 +1,11 @@
-import { useEffect, useMemo, useState } from "react"
+import {
+    useEffect,
+    useMemo,
+    useState,
+} from "react"
+
 import { v4 as uuidv4 } from "uuid"
+
 import {
     MdArchive,
     MdClose,
@@ -9,11 +15,17 @@ import {
     MdFileDownload,
 } from "react-icons/md"
 
-import type { CommentT, TaskT } from "../../types"
+import type {
+    CommentT,
+    TaskT,
+} from "../../types"
 
 import { useToast } from "../../hooks/useToast"
 import { useAuth } from "../../hooks/useAuth"
+
 import { useTicketMutations } from "../../hooks/useTicketMutations"
+
+import { ticketsService } from "../../services/tickets"
 
 type Tab =
     | "detalhes"
@@ -33,9 +45,16 @@ const TaskModal = ({
     task,
 }: Props) => {
     const { user } = useAuth()
-    const CURRENT_USER = user?.username || "Desconhecido"
 
-    const { showMessage } = useToast()
+    const CURRENT_USER =
+        user?.username ||
+        "Desconhecido"
+
+    const [imageUrl, setImageUrl] =
+        useState("")
+
+    const { showMessage } =
+        useToast()
 
     const {
         addComment,
@@ -49,7 +68,37 @@ const TaskModal = ({
     const [newComment, setNewComment] =
         useState("")
 
-    // ESC + scroll lock
+    useEffect(() => {
+        let objectUrl = ""
+
+        const load = async () => {
+            try {
+                if (!task?.anexo) return
+
+                const url =
+                    await ticketsService.getAttachmentUrl(
+                        task.anexo
+                    )
+
+                objectUrl = url
+
+                setImageUrl(url)
+            } catch (err) {
+                console.error(err)
+            }
+        }
+
+        load()
+
+        return () => {
+            if (objectUrl) {
+                window.URL.revokeObjectURL(
+                    objectUrl
+                )
+            }
+        }
+    }, [task?.anexo])
+
     useEffect(() => {
         const handleEsc = (
             e: KeyboardEvent
@@ -80,122 +129,186 @@ const TaskModal = ({
         }
     }, [isOpen, onClose])
 
-    const priorityClass = useMemo(() => {
-        switch (task?.prioridade) {
-            case "Crítica":
-                return "bg-[#dc2626]"
+    const priorityClass =
+        useMemo(() => {
+            switch (
+            task?.prioridade
+            ) {
+                case "Crítica":
+                    return "bg-[#dc2626]"
 
-            case "Alta":
-                return "bg-[#ff6900]"
+                case "Alta":
+                    return "bg-[#ff6900]"
 
-            case "Média":
-                return "bg-[#f0b100]"
+                case "Média":
+                    return "bg-[#f0b100]"
 
-            case "Media":
-                return "bg-[#f0b100]"
+                case "Media":
+                    return "bg-[#f0b100]"
 
-            default:
-                return "bg-[#00c950]"
-        }
-    }, [task?.prioridade])
+                default:
+                    return "bg-[#00c950]"
+            }
+        }, [task?.prioridade])
 
-    if (!isOpen || !task) return null
+    if (!isOpen || !task)
+        return null
 
-    const handleArchive = async () => {
-        const confirmMessage =
-            task.isArchived
-                ? "Deseja realmente desarquivar este chamado?"
-                : "Deseja realmente arquivar este chamado?"
+    const isImage =
+        task.anexo &&
+        (
+            task.anexo
+                .toLowerCase()
+                .endsWith(".png") ||
 
-        if (!confirm(confirmMessage)) {
-            return
-        }
+            task.anexo
+                .toLowerCase()
+                .endsWith(".jpg") ||
 
-        try {
-            const historyItem = {
-                from: task.isArchived
-                    ? "Arquivados"
-                    : "Desarquivados",
+            task.anexo
+                .toLowerCase()
+                .endsWith(".jpeg") ||
 
-                to: task.isArchived
-                    ? "Desaquivados"
-                    : "Arquivados",
+            task.anexo
+                .toLowerCase()
+                .endsWith(".webp")
+        )
 
-                user: CURRENT_USER,
+    const isPdf =
+        task.anexo &&
+        task.anexo
+            .toLowerCase()
+            .endsWith(".pdf")
 
-                date: new Date().toISOString(),
+    const handleArchive =
+        async () => {
+            const confirmMessage =
+                task.isArchived
+                    ? "Deseja realmente desarquivar este chamado?"
+                    : "Deseja realmente arquivar este chamado?"
+
+            if (
+                !confirm(
+                    confirmMessage
+                )
+            ) {
+                return
             }
 
-            await archiveTicket.mutateAsync({
-                id: task.id,
-                history: historyItem,
-            })
-            showMessage("Chamado arquivado com sucesso!", "success")
-            onClose()
-        } catch (error) {
-            console.error(error)
+            try {
+                const historyItem = {
+                    from:
+                        task.isArchived
+                            ? "Arquivados"
+                            : "Desarquivados",
 
-            showMessage(
-                "Erro ao arquivar chamado",
-                "error"
-            )
+                    to:
+                        task.isArchived
+                            ? "Desaquivados"
+                            : "Arquivados",
+
+                    user: CURRENT_USER,
+
+                    date: new Date().toISOString(),
+                }
+
+                await archiveTicket.mutateAsync(
+                    {
+                        id: task.id,
+                        history:
+                            historyItem,
+                    }
+                )
+
+                showMessage(
+                    "Chamado arquivado com sucesso!",
+                    "success"
+                )
+
+                onClose()
+            } catch (error) {
+                console.error(error)
+
+                showMessage(
+                    "Erro ao arquivar chamado",
+                    "error"
+                )
+            }
         }
-    }
 
-    const handleDelete = async () => {
-        if (
-            !confirm(
-                "Deseja realmente excluir este chamado?"
-            )
-        ) {
-            return
-        }
-
-        try {
-            await deleteTicket.mutateAsync(
-                task.id
-            )
-            showMessage("Ticket deletado com sucesso!", "success")
-            onClose()
-        } catch (error) {
-            console.error(error)
-
-            showMessage(
-                "Erro ao excluir chamado",
-                "error"
-            )
-        }
-    }
-
-    const handleAddComment = async () => {
-        if (!newComment.trim()) return
-
-        try {
-            const comment: CommentT = {
-                id: uuidv4(),
-
-                user: CURRENT_USER,
-
-                message: newComment,
-
-                date: new Date().toISOString(),
+    const handleDelete =
+        async () => {
+            if (
+                !confirm(
+                    "Deseja realmente excluir este chamado?"
+                )
+            ) {
+                return
             }
 
-            await addComment.mutateAsync({
-                ticketId: task.id,
-                comment,
-            })
-            showMessage("Comentário adicionado com sucesso!", "success")
-            setNewComment("")
-        } catch (error) {
-            console.error(error)
+            try {
+                await deleteTicket.mutateAsync(
+                    task.id
+                )
 
-            showMessage(
-                "Erro ao adicionar comentário",
-                "error"
-            )
+                showMessage(
+                    "Ticket deletado com sucesso!",
+                    "success"
+                )
+
+                onClose()
+            } catch (error) {
+                console.error(error)
+
+                showMessage(
+                    "Erro ao excluir chamado",
+                    "error"
+                )
+            }
         }
-    }
+
+    const handleAddComment =
+        async () => {
+            if (
+                !newComment.trim()
+            ) return
+
+            try {
+                const comment: CommentT =
+                {
+                    id: uuidv4(),
+
+                    user: CURRENT_USER,
+
+                    message:
+                        newComment,
+
+                    date: new Date().toISOString(),
+                }
+
+                await addComment.mutateAsync(
+                    {
+                        ticketId:
+                            task.id,
+                        comment,
+                    }
+                )
+
+                showMessage(
+                    "Comentário adicionado com sucesso!",
+                    "success"
+                )
+
+                setNewComment("")
+            } catch (error) {
+                console.error(error)
+
+                showMessage(
+                    "Erro ao adicionar comentário",
+                    "error"
+                )
+            }
+        }
 
     return (
         <div
@@ -316,15 +429,22 @@ const TaskModal = ({
                         </div>
 
                         <p>
-                            <b>Equipamento:</b> {task.equipment 
+                            <b>Equipamento:</b> {task.equipment
                                 ? `${task.equipment.nome} (${task.equipment.marcaModelo})`
                                 : "Nenhum equipamento vinculado"
                             }
                         </p>
 
                         <div className="mt-4 border-t pt-4">
-                            <h3 className="mb-2 font-bold text-gray-700">Descrição do Problema:</h3>
-                            <p className="text-gray-700">{task.descricao}</p>
+                            <h3 className="mb-2 font-bold text-gray-700">
+                                Descrição do Problema:
+                            </h3>
+
+                            <div className="max-h-[250px] overflow-y-auto rounded-lg border bg-gray-50 p-3">
+                                <p className="whitespace-pre-wrap text-gray-700">
+                                    {task.descricao}
+                                </p>
+                            </div>
                         </div>
                     </div>
                 )}
@@ -397,55 +517,82 @@ const TaskModal = ({
                         )}
                     </div>
                 )}
-                
+
                 {/* ANEXOS */}
-                {tab === "anexos" && task.anexo && (
-                    <div className="space-y-4">
-                        <div className="flex items-center justify-between rounded-xl bg-blue-50 p-4 border border-blue-100">
-                            <div className="flex items-center gap-3">
-                                <div className="p-2 bg-blue-600 rounded-lg text-white">
-                                    <MdAttachFile size={20} />
+                {tab ===
+                    "anexos" &&
+                    task.anexo && (
+                        <div className="space-y-4">
+                            <div className="flex items-center justify-between rounded-xl bg-blue-50 p-4 border border-blue-100">
+                                <div className="flex items-center gap-3">
+                                    <div className="p-2 bg-blue-600 rounded-lg text-white">
+                                        <MdAttachFile
+                                            size={
+                                                20
+                                            }
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <p className="text-sm font-bold text-gray-700">
+                                            Arquivo
+                                            Anexado
+                                        </p>
+
+                                        <p className="text-xs text-gray-500 truncate max-w-[200px] md:max-w-md">
+                                            {
+                                                task.anexo
+                                            }
+                                        </p>
+                                    </div>
                                 </div>
-                                <div>
-                                    <p className="text-sm font-bold text-gray-700">Arquivo Anexado</p>
-                                    <p className="text-xs text-gray-500 truncate max-w-[200px] md:max-w-md">{task.anexo}</p>
-                                </div>
+
+                                <button
+                                    type="button"
+                                    onClick={() =>
+                                        ticketsService.downloadAttachment(
+                                            task.anexo
+                                        )
+                                    }
+                                    className="flex items-center gap-2 bg-white text-blue-600 border border-blue-200 px-4 py-2 rounded-xl text-sm font-bold hover:bg-blue-50 transition-colors shadow-sm"
+                                >
+                                    <MdFileDownload
+                                        size={
+                                            18
+                                        }
+                                    />
+
+                                    Download
+                                </button>
                             </div>
-                            <a 
-                                href={`http://localhost:3001/archive/${task.anexo}`} 
-                                target="_blank" 
-                                rel="noreferrer"
-                                className="flex items-center gap-2 bg-white text-blue-600 border border-blue-200 px-4 py-2 rounded-xl text-sm font-bold hover:bg-blue-50 transition-colors shadow-sm"
-                            >
-                                <MdFileDownload size={18} />
-                                Download
-                            </a>
+
+                            {isImage &&
+                                imageUrl && (
+                                    <div className="mt-4 border rounded-2xl overflow-hidden shadow-sm bg-gray-50">
+                                        <img
+                                            src={
+                                                imageUrl
+                                            }
+                                            alt="Anexo do chamado"
+                                            className="w-full h-auto max-h-[400px] object-contain mx-auto"
+                                        />
+                                    </div>
+                                )}
+
+                            {isPdf &&
+                                imageUrl && (
+                                    <div className="mt-4 border rounded-2xl overflow-hidden h-[400px] shadow-sm">
+                                        <iframe
+                                            src={
+                                                imageUrl
+                                            }
+                                            title="PDF Viewer"
+                                            className="w-full h-full border-none"
+                                        />
+                                    </div>
+                                )}
                         </div>
-                        
-                        {(task.anexo.toLowerCase().endsWith('.png') || 
-                          task.anexo.toLowerCase().endsWith('.jpg') || 
-                          task.anexo.toLowerCase().endsWith('.jpeg') || 
-                          task.anexo.toLowerCase().endsWith('.webp')) && (
-                            <div className="mt-4 border rounded-2xl overflow-hidden shadow-sm bg-gray-50">
-                                <img 
-                                    src={`http://localhost:3001/archive/${task.anexo}`} 
-                                    alt="Anexo do chamado" 
-                                    className="w-full h-auto max-h-[400px] object-contain mx-auto"
-                                />
-                            </div>
-                        )}
-                        
-                        {task.anexo.toLowerCase().endsWith('.pdf') && (
-                            <div className="mt-4 border rounded-2xl overflow-hidden h-[400px] shadow-sm">
-                                <iframe 
-                                    src={`http://localhost:3001/archive/${task.anexo}`} 
-                                    title="PDF Viewer"
-                                    className="w-full h-full border-none"
-                                />
-                            </div>
-                        )}
-                    </div>
-                )}
+                    )}
             </div>
         </div>
     )
