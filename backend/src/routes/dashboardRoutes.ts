@@ -1,6 +1,9 @@
 import { Router } from 'express';
 import prisma from '../lib/prisma.js';
+import { logger } from '../lib/logger.js';
 import { getDateRangeFromParams, buildDateFilter, toDateString } from '../utils/dateUtils.js';
+import { validate } from '../middleware/validate.js';
+import { dashboardQuerySchema } from '../schemas/dashboard.js';
 
 const router = Router();
 
@@ -14,7 +17,7 @@ const CATEGORY_COLORS = [
 
 // ─── Histórico (todos os chamados, incluindo arquivados) ───
 
-router.get('/kpis', async (req, res) => {
+router.get('/kpis', validate(dashboardQuerySchema, 'query'), async (req, res) => {
   try {
     const { startDate, endDate } = getDateRangeFromParams(req.query);
     const dateFilter = buildDateFilter(startDate, endDate, 'createdAt');
@@ -114,12 +117,12 @@ router.get('/kpis', async (req, res) => {
       periodEnd: endDate ? toDateString(endDate) : null
     });
   } catch (error) {
-    console.error('Error fetching KPIs:', error);
+    logger.error({ err: error }, 'Error fetching KPIs');
     res.status(500).json({ error: 'Failed to fetch KPIs' });
   }
 });
 
-router.get('/charts', async (req, res) => {
+router.get('/charts', validate(dashboardQuerySchema, 'query'), async (req, res) => {
   try {
     const { startDate, endDate } = getDateRangeFromParams(req.query);
     const dateFilter = buildDateFilter(startDate, endDate);
@@ -217,7 +220,7 @@ router.get('/charts', async (req, res) => {
       unit: unitData
     });
   } catch (error) {
-    console.error('Error fetching chart data:', error);
+    logger.error({ err: error }, 'Error fetching chart data');
     res.status(500).json({ error: 'Failed to fetch chart data' });
   }
 });
@@ -241,12 +244,12 @@ router.get('/recent', async (req, res) => {
 
     res.json(tickets);
   } catch (error) {
-    console.error('Error fetching recent tickets:', error);
+    logger.error({ err: error }, 'Error fetching recent tickets');
     res.status(500).json({ error: 'Failed to fetch recent tickets' });
   }
 });
 
-router.get('/alerts', async (req, res) => {
+router.get('/alerts', validate(dashboardQuerySchema, 'query'), async (req, res) => {
   try {
     const { startDate, endDate } = getDateRangeFromParams(req.query);
     const dateFilter = buildDateFilter(startDate, endDate);
@@ -268,12 +271,12 @@ router.get('/alerts', async (req, res) => {
 
     res.json(highPriorityTickets);
   } catch (error) {
-    console.error('Error fetching alerts:', error);
+    logger.error({ err: error }, 'Error fetching alerts');
     res.status(500).json({ error: 'Failed to fetch alerts' });
   }
 });
 
-router.get('/evolution', async (req, res) => {
+router.get('/evolution', validate(dashboardQuerySchema, 'query'), async (req, res) => {
   try {
     const { startDate, endDate } = getDateRangeFromParams(req.query);
     const days = parseInt(req.query.days as string) || 30;
@@ -338,7 +341,7 @@ router.get('/evolution', async (req, res) => {
 
     res.json(evolutionData);
   } catch (error) {
-    console.error('Error fetching evolution data:', error);
+    logger.error({ err: error }, 'Error fetching evolution data');
     res.status(500).json({ error: 'Failed to fetch evolution data' });
   }
 });
@@ -381,7 +384,7 @@ router.get('/avg-resolution-time', async (req, res) => {
       periodEnd: toDateString(effectiveEndDate)
     });
   } catch (error) {
-    console.error('Error fetching avg resolution time:', error);
+    logger.error({ err: error }, 'Error fetching avg resolution time');
     res.status(500).json({ error: 'Failed to fetch average resolution time' });
   }
 });
@@ -416,7 +419,7 @@ router.get('/technician-distribution', async (req, res) => {
 
     res.json(distributionArray);
   } catch (error) {
-    console.error('Error fetching requester distribution:', error);
+    logger.error({ err: error }, 'Error fetching requester distribution');
     res.status(500).json({ error: 'Failed to fetch requester distribution' });
   }
 });
@@ -481,7 +484,7 @@ router.get('/sla-compliance', async (req, res) => {
       periodEnd: toDateString(effectiveEndDate)
     });
   } catch (error) {
-    console.error('Error fetching SLA compliance:', error);
+    logger.error({ err: error }, 'Error fetching SLA compliance');
     res.status(500).json({ error: 'Failed to fetch SLA compliance' });
   }
 });
@@ -529,7 +532,7 @@ router.get('/avg-first-response-time', async (req, res) => {
       periodEnd: toDateString(effectiveEndDate)
     });
   } catch (error) {
-    console.error('Error fetching avg first response time:', error);
+    logger.error({ err: error }, 'Error fetching avg first response time');
     res.status(500).json({ error: 'Failed to fetch average first response time' });
   }
 });
@@ -594,7 +597,7 @@ router.get('/overdue-tickets', async (req, res) => {
       periodDays: days
     });
   } catch (error) {
-    console.error('Error fetching overdue tickets:', error);
+    logger.error({ err: error }, 'Error fetching overdue tickets');
     res.status(500).json({ error: 'Failed to fetch overdue tickets' });
   }
 });
@@ -638,7 +641,7 @@ router.get('/creation-vs-resolution', async (req, res) => {
       periodEnd: toDateString(effectiveEndDate)
     });
   } catch (error) {
-    console.error('Error fetching creation vs resolution:', error);
+    logger.error({ err: error }, 'Error fetching creation vs resolution');
     res.status(500).json({ error: 'Failed to fetch creation vs resolution data' });
   }
 });
@@ -677,7 +680,7 @@ router.get('/ticket-age', async (req, res) => {
       periodEnd: toDateString(effectiveEndDate)
     });
   } catch (error) {
-    console.error('Error fetching ticket age:', error);
+    logger.error({ err: error }, 'Error fetching ticket age');
     res.status(500).json({ error: 'Failed to fetch ticket age' });
   }
 });
@@ -732,7 +735,7 @@ router.get('/resolution-time-by-category', async (req, res) => {
       periodEnd: toDateString(effectiveEndDate)
     });
   } catch (error) {
-    console.error('Error fetching resolution time by category:', error);
+    logger.error({ err: error }, 'Error fetching resolution time by category');
     res.status(500).json({ error: 'Failed to fetch resolution time by category' });
   }
 });
@@ -779,7 +782,7 @@ router.get('/equipment-issues', async (req, res) => {
       periodEnd: toDateString(effectiveEndDate)
     });
   } catch (error) {
-    console.error('Error fetching equipment issues:', error);
+    logger.error({ err: error }, 'Error fetching equipment issues');
     res.status(500).json({ error: 'Failed to fetch equipment issues' });
   }
 });
@@ -832,7 +835,7 @@ router.get('/category-by-unit', async (req, res) => {
       periodEnd: toDateString(effectiveEndDate)
     });
   } catch (error) {
-    console.error('Error fetching category by unit:', error);
+    logger.error({ err: error }, 'Error fetching category by unit');
     res.status(500).json({ error: 'Failed to fetch category by unit' });
   }
 });
@@ -874,7 +877,7 @@ router.get('/category-trend', async (req, res) => {
       periodDays: days
     });
   } catch (error) {
-    console.error('Error fetching category trend:', error);
+    logger.error({ err: error }, 'Error fetching category trend');
     res.status(500).json({ error: 'Failed to fetch category trend' });
   }
 });
@@ -923,7 +926,7 @@ router.get('/operational-efficiency', async (req, res) => {
       periodEnd: toDateString(effectiveEndDate)
     });
   } catch (error) {
-    console.error('Error fetching operational efficiency:', error);
+    logger.error({ err: error }, 'Error fetching operational efficiency');
     res.status(500).json({ error: 'Failed to fetch operational efficiency' });
   }
 });
@@ -995,7 +998,7 @@ router.get('/avg-time-by-status', async (req, res) => {
       periodEnd: toDateString(effectiveEndDate)
     });
   } catch (error) {
-    console.error('Error fetching average time by status:', error);
+    logger.error({ err: error }, 'Error fetching average time by status');
     res.status(500).json({ error: 'Failed to fetch average time by status' });
   }
 });
@@ -1154,7 +1157,7 @@ router.get('/active-summary', async (req, res) => {
       alerts
     });
   } catch (error) {
-    console.error('Error fetching active summary:', error);
+    logger.error({ err: error }, 'Error fetching active summary');
     res.status(500).json({ error: 'Failed to fetch active summary' });
   }
 });

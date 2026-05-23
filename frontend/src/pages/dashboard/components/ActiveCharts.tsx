@@ -33,8 +33,8 @@ function PieChart({ data, colors }: { data: ChartData[]; colors: Record<string, 
     <div className="flex items-center justify-center gap-8">
       <div className="w-32 h-32 rounded-full" style={{ background: conic }} />
       <div className="space-y-2">
-        {data.map((item, index) => (
-          <div key={index} className="flex items-center gap-2 text-sm">
+        {data.map((item) => (
+          <div key={item.name} className="flex items-center gap-2 text-sm">
             <div className="w-3 h-3 rounded-full" style={{ backgroundColor: colors[item.name] || '#6b7280' }} />
             <span className="text-gray-600">{item.name}: {item.value}</span>
           </div>
@@ -48,8 +48,8 @@ function BarChart({ data, color }: { data: { name: string; value: number }[]; co
   const maxValue = Math.max(...data.map(d => d.value), 1);
   return (
     <div className="space-y-3">
-      {data.map((item, index) => (
-        <div key={index} className="flex items-center gap-3">
+      {data.map((item) => (
+        <div key={item.name} className="flex items-center gap-3">
           <span className="text-xs text-gray-600 w-20 truncate">{item.name}</span>
           <div className="flex-1 h-6 bg-gray-100 rounded-full overflow-hidden">
             <div

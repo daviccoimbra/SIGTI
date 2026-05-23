@@ -1,5 +1,6 @@
 import type { Request, Response } from 'express';
 import prisma from '../lib/prisma.js';
+import { logger } from '../lib/logger.js';
 
 export const createTicket = async (req: Request, res: Response) => {
   try {
@@ -43,7 +44,7 @@ export const createTicket = async (req: Request, res: Response) => {
     });
     res.status(201).json(ticket);
   } catch (error) {
-    console.error('Erro detalhado ao criar chamado:', error);
+    logger.error({ err: error }, 'Erro ao criar chamado');
     res.status(500).json({ error: 'Erro interno ao criar chamado. Verifique a conexão com o banco de dados.' });
   }
 };
@@ -98,7 +99,7 @@ export const updateTicketStatus = async (req: Request, res: Response) => {
 
     res.json(result);
   } catch (error) {
-    console.error('Erro ao atualizar status (transação):', error);
+    logger.error({ err: error }, 'Erro ao atualizar status');
     res.status(500).json({ error: 'Erro ao atualizar status e histórico' });
   }
 };
@@ -137,7 +138,7 @@ export const archiveTicket = async (
 
     return res.status(200).json(ticket)
   } catch (error) {
-    console.log(error)
+    logger.error({ err: error }, 'Erro ao arquivar chamado')
 
     return res.status(500).json({
       error: "Erro ao arquivar chamado",
@@ -196,7 +197,7 @@ export const addComment = async (
 
     return res.status(200).json(updatedTicket)
   } catch (error) {
-    console.log(error)
+    logger.error({ err: error }, 'Erro ao adicionar comentário')
 
     return res.status(500).json({
       error: "Erro ao adicionar comentário",

@@ -1,0 +1,155 @@
+
+<style>
+.cat-header {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 14px; cursor: pointer;
+  border-radius: var(--border-radius-md);
+  transition: background 0.15s;
+  user-select: none;
+}
+.cat-header:hover { background: var(--color-background-secondary); }
+.cat-block { margin-bottom: 8px; border: 0.5px solid var(--color-border-tertiary); border-radius: var(--border-radius-lg); overflow: hidden; }
+.cat-title { font-size: 15px; font-weight: 500; color: var(--color-text-primary); flex: 1; }
+.cat-badge { font-size: 11px; padding: 2px 9px; border-radius: 20px; font-weight: 500; }
+.badge-critical { background: var(--color-background-danger); color: var(--color-text-danger); }
+.badge-important { background: var(--color-background-warning); color: var(--color-text-warning); }
+.badge-recommended { background: var(--color-background-info); color: var(--color-text-info); }
+.badge-bonus { background: var(--color-background-secondary); color: var(--color-text-secondary); }
+.chevron { font-size: 14px; color: var(--color-text-tertiary); transition: transform 0.2s; }
+.chevron.open { transform: rotate(180deg); }
+.cat-items { padding: 0 14px 12px; display: none; }
+.cat-items.open { display: block; }
+.item { display: flex; align-items: flex-start; gap: 10px; padding: 7px 0; border-bottom: 0.5px solid var(--color-border-tertiary); }
+.item:last-child { border-bottom: none; }
+.item input[type=checkbox] { margin-top: 2px; flex-shrink: 0; cursor: pointer; width: 15px; height: 15px; }
+.item-text { font-size: 13px; color: var(--color-text-primary); line-height: 1.5; flex: 1; }
+.item-text.checked { color: var(--color-text-tertiary); text-decoration: line-through; }
+.item-detail { font-size: 12px; color: var(--color-text-secondary); margin-top: 2px; }
+.progress-bar-track { height: 4px; background: var(--color-border-tertiary); border-radius: 2px; margin: 0 0 16px; }
+.progress-bar-fill { height: 4px; background: var(--color-text-success); border-radius: 2px; transition: width 0.3s; }
+#summary { font-size: 13px; color: var(--color-text-secondary); margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; }
+.ask-btn { font-size: 12px; padding: 3px 10px; border-radius: var(--border-radius-md); border: 0.5px solid var(--color-border-secondary); background: transparent; color: var(--color-text-info); cursor: pointer; margin-top: 6px; }
+.ask-btn:hover { background: var(--color-background-secondary); }
+</style>
+
+<h2 class="sr-only">Checklist interativo de qualidade pré-deploy para aplicação fullstack</h2>
+
+<div style="padding: 1rem 0 0;">
+  <div id="summary"><span id="progress-text">0 de 20 itens concluídos</span><span id="pct" style="font-weight:500;color:var(--color-text-success)">0%</span></div>
+  <div class="progress-bar-track"><div class="progress-bar-fill" id="bar" style="width:0%"></div></div>
+
+  <div class="cat-block" id="cat0">
+    <div class="cat-header" onclick="toggle(0)">
+      <i class="ti ti-alert-triangle" style="font-size:18px;color:var(--color-text-danger)" aria-hidden="true"></i>
+      <span class="cat-title">1. Segurança básica</span>
+      <span class="cat-badge badge-critical">Crítico</span>
+      <i class="ti ti-chevron-down chevron" id="chev0"></i>
+    </div>
+    <div class="cat-items open" id="items0">
+      <div class="item"><input type="checkbox" onchange="update()"><div class="item-text">Variáveis de ambiente fora do código<div class="item-detail">Nenhuma chave de API, senha ou segredo no repositório. Use .env e adicione ao .gitignore.</div></div></div>
+      <div class="item"><input type="checkbox" onchange="update()"><div class="item-text">Autenticação e autorização funcionando<div class="item-detail">Teste rotas protegidas sem token — devem retornar 401/403. Usuário A não acessa dados do usuário B.</div></div></div>
+      <div class="item"><input type="checkbox" onchange="update()"><div class="item-text">Inputs do usuário validados e sanitizados<div class="item-detail">Backend valida todos os campos (nunca confiar só no frontend). Proteção básica contra SQL injection e XSS.</div></div></div>
+      <div class="item"><input type="checkbox" onchange="update()"><div class="item-text">CORS configurado corretamente<div class="item-detail">Apenas origens confiáveis têm acesso à API. Não use wildcard (*) em produção.</div></div></div>
+      <button class="ask-btn" onclick="sendPrompt('Me ajude a revisar a segurança básica da minha aplicação fullstack antes do deploy')">Revisar segurança comigo ↗</button>
+    </div>
+  </div>
+
+  <div class="cat-block" id="cat1">
+    <div class="cat-header" onclick="toggle(1)">
+      <i class="ti ti-test-pipe" style="font-size:18px;color:var(--color-text-warning)" aria-hidden="true"></i>
+      <span class="cat-title">2. Testes essenciais</span>
+      <span class="cat-badge badge-important">Importante</span>
+      <i class="ti ti-chevron-down chevron" id="chev1"></i>
+    </div>
+    <div class="cat-items" id="items1">
+      <div class="item"><input type="checkbox" onchange="update()"><div class="item-text">Fluxos principais testados manualmente<div class="item-detail">Cadastro, login, ação principal do produto, logout. Se um usuário real fizer isso, funciona?</div></div></div>
+      <div class="item"><input type="checkbox" onchange="update()"><div class="item-text">Testes unitários nos pontos críticos do backend<div class="item-detail">Funções de negócio, cálculos, validações. Pelo menos 1 teste por função crítica.</div></div></div>
+      <div class="item"><input type="checkbox" onchange="update()"><div class="item-text">Endpoints da API testados (Postman / Insomnia)<div class="item-detail">Teste todos os endpoints: sucesso, erro esperado (400), não autorizado (401), não encontrado (404).</div></div></div>
+      <div class="item"><input type="checkbox" onchange="update()"><div class="item-text">Testado em mais de um browser<div class="item-detail">Chrome + Firefox no mínimo. Safari se o público-alvo usa Mac/iOS.</div></div></div>
+      <button class="ask-btn" onclick="sendPrompt('Como configurar testes unitários e de integração do zero para uma aplicação fullstack?')">Como configurar testes do zero ↗</button>
+    </div>
+  </div>
+
+  <div class="cat-block" id="cat2">
+    <div class="cat-header" onclick="toggle(2)">
+      <i class="ti ti-bug" style="font-size:18px;color:var(--color-text-warning)" aria-hidden="true"></i>
+      <span class="cat-title">3. Tratamento de erros</span>
+      <span class="cat-badge badge-important">Importante</span>
+      <i class="ti ti-chevron-down chevron" id="chev2"></i>
+    </div>
+    <div class="cat-items" id="items2">
+      <div class="item"><input type="checkbox" onchange="update()"><div class="item-text">API retorna respostas de erro claras e padronizadas<div class="item-detail">Nunca exponha stack traces para o usuário. Mensagens genéricas para o cliente, detalhes só nos logs.</div></div></div>
+      <div class="item"><input type="checkbox" onchange="update()"><div class="item-text">Frontend trata erros de rede e API<div class="item-detail">O que acontece se a API cair? O usuário vê uma mensagem útil, não uma tela em branco.</div></div></div>
+      <div class="item"><input type="checkbox" onchange="update()"><div class="item-text">Logs estruturados no backend<div class="item-detail">Erros são registrados com contexto suficiente para debugar em produção. Sem console.log solto.</div></div></div>
+      <button class="ask-btn" onclick="sendPrompt('Como implementar tratamento de erros e logs adequados no backend Node.js ou Python?')">Ver boas práticas de erros ↗</button>
+    </div>
+  </div>
+
+  <div class="cat-block" id="cat3">
+    <div class="cat-header" onclick="toggle(3)">
+      <i class="ti ti-device-mobile" style="font-size:18px;color:var(--color-text-info)" aria-hidden="true"></i>
+      <span class="cat-title">4. Frontend e experiência</span>
+      <span class="cat-badge badge-recommended">Recomendado</span>
+      <i class="ti ti-chevron-down chevron" id="chev3"></i>
+    </div>
+    <div class="cat-items" id="items3">
+      <div class="item"><input type="checkbox" onchange="update()"><div class="item-text">Responsivo em mobile e desktop<div class="item-detail">Teste em 375px (iPhone SE) e 1280px. O layout quebra em algum ponto?</div></div></div>
+      <div class="item"><input type="checkbox" onchange="update()"><div class="item-text">Estados de loading e feedback ao usuário<div class="item-detail">Botões mostram loading ao clicar? Formulários dão feedback de sucesso/erro?</div></div></div>
+      <div class="item"><input type="checkbox" onchange="update()"><div class="item-text">Sem erros no console do browser<div class="item-detail">Abra o DevTools (F12) e navegue por todas as telas. Console deve estar limpo.</div></div></div>
+      <button class="ask-btn" onclick="sendPrompt('Como fazer um audit de qualidade do frontend antes do deploy?')">Revisar frontend comigo ↗</button>
+    </div>
+  </div>
+
+  <div class="cat-block" id="cat4">
+    <div class="cat-header" onclick="toggle(4)">
+      <i class="ti ti-database" style="font-size:18px;color:var(--color-text-info)" aria-hidden="true"></i>
+      <span class="cat-title">5. Banco de dados e dados</span>
+      <span class="cat-badge badge-recommended">Recomendado</span>
+      <i class="ti ti-chevron-down chevron" id="chev4"></i>
+    </div>
+    <div class="cat-items" id="items4">
+      <div class="item"><input type="checkbox" onchange="update()"><div class="item-text">Migrations versionadas e funcionando<div class="item-detail">O schema do banco pode ser recriado a partir das migrations do zero. Sem alterações manuais no banco.</div></div></div>
+      <div class="item"><input type="checkbox" onchange="update()"><div class="item-text">Dados sensíveis protegidos<div class="item-detail">Senhas com hash (bcrypt). Dados pessoais não expostos em logs ou respostas desnecessárias.</div></div></div>
+      <div class="item"><input type="checkbox" onchange="update()"><div class="item-text">Estratégia de backup definida<div class="item-detail">Sabe como restaurar o banco se algo der errado? Backup automático está configurado?</div></div></div>
+      <button class="ask-btn" onclick="sendPrompt('Como proteger e estruturar o banco de dados antes de ir para produção?')">Ver boas práticas de banco ↗</button>
+    </div>
+  </div>
+
+  <div class="cat-block" id="cat5">
+    <div class="cat-header" onclick="toggle(5)">
+      <i class="ti ti-bolt" style="font-size:18px;color:var(--color-text-secondary)" aria-hidden="true"></i>
+      <span class="cat-title">6. Performance mínima</span>
+      <span class="cat-badge badge-bonus">Bônus</span>
+      <i class="ti ti-chevron-down chevron" id="chev5"></i>
+    </div>
+    <div class="cat-items" id="items5">
+      <div class="item"><input type="checkbox" onchange="update()"><div class="item-text">Build de produção do frontend gerado<div class="item-detail">npm run build sem erros. Assets minificados. Não subir o servidor de dev em produção.</div></div></div>
+      <div class="item"><input type="checkbox" onchange="update()"><div class="item-text">Lighthouse score acima de 70<div class="item-detail">Abra o DevTools > Lighthouse > Generate report. Foque em Performance e Accessibility.</div></div></div>
+      <div class="item"><input type="checkbox" onchange="update()"><div class="item-text">Tempo de resposta da API abaixo de 500ms<div class="item-detail">Endpoints principais respondem rápido? Queries sem N+1 ou buscas sem índice?</div></div></div>
+      <button class="ask-btn" onclick="sendPrompt('Como otimizar performance de uma aplicação fullstack antes do primeiro deploy?')">Ver otimizações de performance ↗</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const TOTAL = 20;
+function toggle(i) {
+  const items = document.getElementById('items'+i);
+  const chev = document.getElementById('chev'+i);
+  items.classList.toggle('open');
+  chev.classList.toggle('open');
+}
+function update() {
+  const boxes = document.querySelectorAll('input[type=checkbox]');
+  let done = 0;
+  boxes.forEach(b => {
+    const label = b.closest('.item')?.querySelector('.item-text');
+    if (b.checked) { done++; if(label) label.classList.add('checked'); }
+    else { if(label) label.classList.remove('checked'); }
+  });
+  const pct = Math.round((done / TOTAL) * 100);
+  document.getElementById('bar').style.width = pct + '%';
+  document.getElementById('progress-text').textContent = done + ' de ' + TOTAL + ' itens concluídos';
+  document.getElementById('pct').textContent = pct + '%';
+}
+</script>

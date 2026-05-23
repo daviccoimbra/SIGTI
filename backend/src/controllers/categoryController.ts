@@ -1,5 +1,6 @@
 import type { Request, Response } from 'express';
 import prisma from '../lib/prisma.js';
+import { logger } from '../lib/logger.js';
 
 export const createCategory = async (req: Request, res: Response) => {
   try {
@@ -9,7 +10,7 @@ export const createCategory = async (req: Request, res: Response) => {
     });
     res.status(201).json(category);
   } catch (error) {
-    console.error('Erro ao criar categoria:', error);
+    logger.error({ err: error }, 'Erro ao criar categoria');
     res.status(500).json({ error: 'Erro ao criar categoria' });
   }
 };
@@ -21,7 +22,7 @@ export const getCategories = async (req: Request, res: Response) => {
     });
     res.json(categories);
   } catch (error) {
-    console.error('Erro ao buscar categorias:', error);
+    logger.error({ err: error }, 'Erro ao buscar categorias');
     res.status(500).json({ error: 'Erro ao buscar categorias' });
   }
 };

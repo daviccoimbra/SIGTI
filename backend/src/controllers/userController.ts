@@ -1,5 +1,6 @@
 import type { Request, Response } from 'express';
 import prisma from '../lib/prisma.js';
+import { logger } from '../lib/logger.js';
 
 /**
  * GET /api/users
@@ -56,7 +57,7 @@ export const listUsers = async (req: Request, res: Response) => {
 
     return res.json(users);
   } catch (error) {
-    console.error('Erro ao listar usuários:', error);
+    logger.error({ err: error }, 'Erro ao listar usuários');
     return res.status(500).json({ error: 'Erro interno ao listar usuários' });
   }
 };
@@ -67,7 +68,7 @@ export const listUsers = async (req: Request, res: Response) => {
  */
 export const updateUser = async (req: Request, res: Response) => {
   try {
-    const { id } = req.params;
+    const id = req.params.id as string;
     const { nome, email, departamento, cargo, setor, ativo } = req.body;
 
     // Verifica se o usuário existe
@@ -104,7 +105,7 @@ export const updateUser = async (req: Request, res: Response) => {
 
     return res.json(updatedUser);
   } catch (error) {
-    console.error('Erro ao atualizar usuário:', error);
+    logger.error({ err: error }, 'Erro ao atualizar usuário');
     return res.status(500).json({ error: 'Erro interno ao atualizar usuário' });
   }
 };
@@ -115,8 +116,8 @@ export const updateUser = async (req: Request, res: Response) => {
  */
 export const deleteUser = async (req: Request, res: Response) => {
   try {
-    const { id } = req.params;
-    console.log('Tentativa de deletar usuário com ID:', id);
+    const id = req.params.id as string;
+    logger.info({ id }, 'Tentativa de deletar usuário');
 
 
     // Verifica se o usuário existe
@@ -139,7 +140,7 @@ export const deleteUser = async (req: Request, res: Response) => {
 
     return res.json({ message: 'Usuário removido com sucesso' });
   } catch (error) {
-    console.error('Erro ao deletar usuário:', error);
+    logger.error({ err: error }, 'Erro ao deletar usuário');
     return res.status(500).json({ error: 'Erro interno ao deletar usuário' });
   }
 };

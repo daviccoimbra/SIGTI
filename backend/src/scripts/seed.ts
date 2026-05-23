@@ -1,5 +1,6 @@
 import bcrypt from 'bcrypt';
 import prisma from '../lib/prisma.js';
+import { logger } from '../lib/logger.js';
 
 /**
  * Seed completo do sistema
@@ -475,7 +476,7 @@ async function seedTickets() {
   ];
 
   for (let i = 0; i < tickets.length; i++) {
-    const ticket = tickets[i];
+    const ticket = tickets[i]!;
 
     const exists = await prisma.ticket.findUnique({
       where: { protocolo: ticket.protocolo },
@@ -486,9 +487,9 @@ async function seedTickets() {
       continue;
     }
 
-    const categoria = categorias[i % categorias.length];
-    const equipamento = equipamentos[i % equipamentos.length];
-    const requester = requesters[i % requesters.length];
+    const categoria = categorias[i % categorias.length]!;
+    const equipamento = equipamentos[i % equipamentos.length]!;
+    const requester = requesters[i % requesters.length]!;
 
     await prisma.ticket.create({
       data: {
@@ -522,7 +523,7 @@ async function main() {
 
 main()
   .catch((e) => {
-    console.error('❌ Erro no seed:', e);
+    logger.error({ err: e }, 'Erro no seed');
     process.exit(1);
   })
   .finally(async () => {

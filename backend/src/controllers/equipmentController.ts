@@ -1,5 +1,6 @@
 import type { Request, Response } from 'express';
 import prisma from '../lib/prisma.js';
+import { logger } from '../lib/logger.js';
 
 export const createEquipment = async (req: Request, res: Response) => {
   try {
@@ -9,7 +10,7 @@ export const createEquipment = async (req: Request, res: Response) => {
     });
     res.status(201).json(equipment);
   } catch (error) {
-    console.error('Erro ao criar equipamento:', error);
+    logger.error({ err: error }, 'Erro ao criar equipamento');
     res.status(500).json({ error: 'Erro ao criar equipamento' });
   }
 };
@@ -21,7 +22,7 @@ export const getEquipments = async (req: Request, res: Response) => {
     });
     res.json(equipments);
   } catch (error) {
-    console.error('Erro ao buscar equipamentos:', error);
+    logger.error({ err: error }, 'Erro ao buscar equipamentos');
     res.status(500).json({ error: 'Erro ao buscar equipamentos' });
   }
 };

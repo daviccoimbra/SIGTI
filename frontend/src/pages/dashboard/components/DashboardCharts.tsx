@@ -33,8 +33,8 @@ function SimplePieChart({ data, colors }: { data: { name: string; value: number 
       <div className="relative w-32 h-32 rounded-full" style={{ background: conic }}>
       </div>
       <div className="space-y-2">
-        {data.map((item, index) => (
-          <div key={index} className="flex items-center gap-2 text-sm">
+        {data.map((item) => (
+          <div key={item.name} className="flex items-center gap-2 text-sm">
             <div className="w-3 h-3 rounded-full" style={{ backgroundColor: colors[item.name] || '#6b7280' }} />
             <span className="text-gray-600">{item.name}: {item.value}</span>
           </div>
@@ -48,8 +48,8 @@ function SimpleBarChart({ data, color }: { data: { name: string; value: number }
   const maxValue = Math.max(...data.map(d => d.value), 1);
   return (
     <div className="space-y-3">
-      {data.map((item, index) => (
-        <div key={index} className="flex items-center gap-3">
+      {data.map((item) => (
+        <div key={item.name} className="flex items-center gap-3">
           <span className="text-xs text-gray-600 w-20 truncate">{item.name}</span>
           <div className="flex-1 h-6 bg-gray-100 rounded-full overflow-hidden">
             <div
@@ -117,8 +117,8 @@ export function DashboardCharts({ charts, evolution, isLoading }: DashboardChart
         <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
           <h3 className="text-lg font-semibold text-gray-800 mb-4">Evolução (Últimos 7 dias)</h3>
           <div className="space-y-4">
-            {evolution.map((day, index) => (
-              <div key={index} className="flex items-center gap-4">
+            {evolution.map((day) => (
+              <div key={day.date} className="flex items-center gap-4">
                 <span className="text-xs text-gray-500 w-10">{day.date}</span>
                 <div className="flex-1 flex gap-2">
                   <div className="flex-1 h-6 bg-blue-100 rounded overflow-hidden">

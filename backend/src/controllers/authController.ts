@@ -2,6 +2,7 @@ import type { Request, Response } from 'express';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import prisma from '../lib/prisma.js';
+import { logger } from '../lib/logger.js';
 
 const SALT_ROUNDS = 10;
 
@@ -71,7 +72,7 @@ export const login = async (req: Request, res: Response) => {
       },
     });
   } catch (error) {
-    console.error('Erro ao fazer login:', error);
+    logger.error({ err: error }, 'Erro ao fazer login');
     return res.status(500).json({ error: 'Erro interno ao fazer login' });
   }
 };
@@ -142,7 +143,7 @@ export const register = async (req: Request, res: Response) => {
     });
 
   } catch (error) {
-    console.error('Erro ao registrar usuário:', error);
+    logger.error({ err: error }, 'Erro ao registrar usuário');
     return res.status(500).json({ error: 'Erro interno ao registrar usuário' });
   }
 };
@@ -175,7 +176,7 @@ export const me = async (req: Request, res: Response) => {
 
     return res.json(user);
   } catch (error) {
-    console.error('Erro ao buscar dados do usuário:', error);
+    logger.error({ err: error }, 'Erro ao buscar dados do usuário');
     return res.status(500).json({ error: 'Erro interno' });
   }
 };
