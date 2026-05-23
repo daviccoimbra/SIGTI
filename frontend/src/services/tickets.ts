@@ -89,4 +89,81 @@ export const ticketsService = {
 
         return data
     },
+
+
+    downloadAttachment: async (
+        file: string
+    ) => {
+        const response = await api.get(
+            `/archive/${encodeURIComponent(
+                file
+            )}`,
+            {
+                responseType: "blob",
+            }
+        )
+
+        const url =
+            window.URL.createObjectURL(
+                response.data
+            )
+
+        const a =
+            document.createElement("a")
+
+        a.href = url
+        a.download = file
+
+        document.body.appendChild(a)
+
+        a.click()
+
+        a.remove()
+
+        window.URL.revokeObjectURL(url)
+    },
+
+    viewAttachment: async (
+        file: string
+    ) => {
+        const response = await api.get(
+            `/archive/${encodeURIComponent(
+                file
+            )}`,
+            {
+                responseType: "blob",
+            }
+        )
+
+        const blob = new Blob([
+            response.data,
+        ])
+
+        const url =
+            window.URL.createObjectURL(
+                blob
+            )
+
+        window.open(
+            url,
+            "_blank"
+        )
+    },
+
+    getAttachmentUrl: async (
+        file: string
+    ) => {
+        const response = await api.get(
+            `/archive/${encodeURIComponent(
+                file
+            )}`,
+            {
+                responseType: "blob",
+            }
+        )
+
+        return window.URL.createObjectURL(
+            response.data
+        )
+    },
 }

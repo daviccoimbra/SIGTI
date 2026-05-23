@@ -13,8 +13,11 @@ import userRoutes from './routes/userRoutes.js';
 import dashboardRoutes from './routes/dashboardRoutes.js';
 
 import cookieParser from 'cookie-parser';
+import path from 'path';
+import fs from 'fs';
 import { logger } from './lib/logger.js';
 import { errorHandler } from './middleware/errorHandler.js';
+import { authMiddleware } from './middlewares/authMiddleware.js';
 
 dotenv.config();
 
@@ -43,12 +46,33 @@ app.get('/api/health', (_req, res) => {
 });
 
 app.use('/api/auth', authRoutes);
-app.use('/api/tickets', ticketRoutes);
-app.use('/api/requesters', requesterRoutes);
-app.use('/api/categories', categoryRoutes);
-app.use('/api/equipments', equipmentRoutes);
-app.use('/api/users', userRoutes);
-app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/tickets', authMiddleware, ticketRoutes);
+app.use('/api/requesters', authMiddleware, requesterRoutes);
+app.use('/api/categories', authMiddleware, categoryRoutes);
+app.use('/api/equipments', authMiddleware, equipmentRoutes);
+app.use('/api/users', authMiddleware, userRoutes);
+app.use('/api/dashboard', authMiddleware, dashboardRoutes);
+
+app.get('/api/archive/:file', authMiddleware, (req, res) => {
+  try {
+    const file = decodeURIComponent(req.params.file);
+    const archiveDir = path.resolve(process.cwd(), 'archive');
+    const filePath = path.resolve(archiveDir, file);
+
+    if (!filePath.startsWith(archiveDir)) {
+      return res.status(403).json({ error: 'Acesso negado' });
+    }
+
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).json({ error: 'Arquivo não encontrado' });
+    }
+
+    return res.sendFile(filePath);
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: 'Erro interno' });
+  }
+});
 
 app.use(errorHandler);
 

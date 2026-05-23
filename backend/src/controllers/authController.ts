@@ -82,7 +82,11 @@ export const login = async (req: Request, res: Response) => {
  * Limpa o cookie de autenticação.
  */
 export const logout = async (req: Request, res: Response) => {
-  res.clearCookie('token');
+  res.clearCookie('token', {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+  });
   return res.json({ message: 'Logout realizado com sucesso' });
 };
 

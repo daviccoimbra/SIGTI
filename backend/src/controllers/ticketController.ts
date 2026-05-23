@@ -4,19 +4,19 @@ import { logger } from '../lib/logger.js';
 
 export const createTicket = async (req: Request, res: Response) => {
   try {
-    const { 
-      protocolo, 
-      solicitante, 
-      requesterId, 
-      departamento, 
+    const {
+      protocolo,
+      solicitante,
+      requesterId,
+      departamento,
       categoryId,
       equipmentId,
-      titulo, 
-      descricao, 
+      titulo,
+      descricao,
       classificacao,
-      prioridade 
+      prioridade
     } = req.body;
-    
+
     // Check if protocol already exists
     const existing = await prisma.ticket.findUnique({
       where: { protocolo }
@@ -39,7 +39,11 @@ export const createTicket = async (req: Request, res: Response) => {
         classificacao,
         prioridade,
         status: 'backlog',
-        anexo: req.file ? req.file.filename : null,
+        anexo: req.file
+          ? req.file.path
+            .replace(/\\/g, '/')
+            .replace('archive/', '')
+          : null,
       },
     });
     res.status(201).json(ticket);

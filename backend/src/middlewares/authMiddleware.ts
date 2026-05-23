@@ -1,67 +1,188 @@
-import type { Request, Response, NextFunction } from 'express';
-import jwt from 'jsonwebtoken';
+import type {
+  Request,
+  Response,
+  NextFunction,
+} from 'express'
+
+import jwt from 'jsonwebtoken'
+
+import prisma from '../lib/prisma.js'
 
 export interface JwtPayload {
-  id: string;
-  username: string;
-  nome: string;
-  setor: string;
+  id: string
 }
 
-// Extende a interface Request do Express para incluir o usuário autenticado
+// Extende a interface Request do Express
 declare global {
   namespace Express {
     interface Request {
-      user?: JwtPayload;
+      user?: {
+        id: string
+        username: string
+        nome: string
+        setor: string
+        ativo: boolean
+      }
     }
   }
 }
 
 /**
- * Middleware que verifica se o token JWT é válido.
- * Caso válido, injeta os dados do usuário em `req.user`.
+ * Middleware de autenticação
+ * - Valida JWT
+ * - Verifica se usuário ainda existe
+ * - Verifica se usuário está ativo
  */
-export const authMiddleware = (req: Request, res: Response, next: NextFunction) => {
-  // Tenta obter o token do cookie primeiro, depois do header Authorization como fallback
-  const token = req.cookies.token || req.headers.authorization?.split(' ')[1];
-
-  if (!token) {
-    return res.status(401).json({ error: 'Token não fornecido ou sessão expirada' });
-  }
-
+export const authMiddleware = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   try {
-    const secret = process.env.JWT_SECRET;
-    if (!secret) {
-      return res.status(500).json({ error: 'JWT_SECRET não configurado no servidor' });
+    // Cookie primeiro, Authorization como fallback
+    const token =
+      req.cookies.token ||
+      req.headers.authorization?.split(
+        ' '
+      )[1]
+
+    if (!token) {
+      return res
+        .status(401)
+        .json({
+          error:
+            'Token não fornecido ou sessão expirada',
+        })
     }
 
-    const decoded = jwt.verify(token, secret) as JwtPayload;
-    req.user = decoded;
-    return next();
+    const secret =
+      process.env.JWT_SECRET
+
+    if (!secret) {
+      return res
+        .status(500)
+        .json({
+          error:
+            'JWT_SECRET não configurado no servidor',
+        })
+    }
+
+    // Decodifica token
+    const decoded =
+      jwt.verify(
+        token,
+        secret
+      ) as JwtPayload
+
+    // Busca usuário atualizado no banco
+    const user =
+      await prisma.user.findUnique(
+        {
+          where: {
+            id: decoded.id,
+          },
+
+          select: {
+            id: true,
+            username: true,
+            nome: true,
+            setor: true,
+            ativo: true,
+          },
+        }
+      )
+
+    // Usuário não existe mais
+    if (!user) {
+      res.clearCookie(
+        'token',
+        {
+          httpOnly: true,
+          secure:
+            process.env
+              .NODE_ENV ===
+            'production',
+          sameSite: 'lax',
+        }
+      )
+
+      return res
+        .status(401)
+        .json({
+          error:
+            'Usuário não existe mais',
+        })
+    }
+
+    // Usuário desativado
+    if (!user.ativo) {
+      res.clearCookie(
+        'token',
+        {
+          httpOnly: true,
+          secure:
+            process.env
+              .NODE_ENV ===
+            'production',
+          sameSite: 'lax',
+        }
+      )
+
+      return res
+        .status(403)
+        .json({
+          error:
+            'Usuário desativado',
+        })
+    }
+
+    // Injeta usuário atualizado
+    req.user = user
+
+    return next()
   } catch {
-    return res.status(401).json({ error: 'Token inválido ou expirado' });
+    return res
+      .status(401)
+      .json({
+        error:
+          'Token inválido ou expirado',
+      })
   }
-};
+}
 
 /**
- * Middleware de autorização por setor.
- * Recebe uma lista de setores permitidos e verifica se o usuário autenticado
- * pertence a algum deles.
- *
- * Uso: `router.get('/rota', authMiddleware, authorize('TI', 'ADMIN'), handler)`
+ * Middleware de autorização por setor
  */
-export const authorize = (...setoresPermitidos: string[]) => {
-  return (req: Request, res: Response, next: NextFunction) => {
+export const authorize = (
+  ...setoresPermitidos: string[]
+) => {
+  return (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) => {
     if (!req.user) {
-      return res.status(401).json({ error: 'Usuário não autenticado' });
+      return res
+        .status(401)
+        .json({
+          error:
+            'Usuário não autenticado',
+        })
     }
 
-    if (!setoresPermitidos.includes(req.user.setor)) {
-      return res.status(403).json({
-        error: 'Acesso negado. Seu setor não tem permissão para esta ação.',
-      });
+    if (
+      !setoresPermitidos.includes(
+        req.user.setor
+      )
+    ) {
+      return res
+        .status(403)
+        .json({
+          error:
+            'Acesso negado. Seu setor não tem permissão para esta ação.',
+        })
     }
 
-    return next();
-  };
-};
+    return next()
+  }
+}
