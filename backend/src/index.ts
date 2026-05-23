@@ -1,70 +1,178 @@
-import express from 'express';
-import cors from 'cors';
-import dotenv from 'dotenv';
-import ticketRoutes from './routes/ticketRoutes.js';
-import requesterRoutes from './routes/requesterRoutes.js';
-import categoryRoutes from './routes/categoryRoutes.js';
-import equipmentRoutes from './routes/equipmentRoutes.js';
-import authRoutes from './routes/authRoutes.js';
-import userRoutes from './routes/userRoutes.js';
-import dashboardRoutes from './routes/dashboardRoutes.js';
+import express from 'express'
+import cors from 'cors'
+import dotenv from 'dotenv'
+
 import path from 'path'
 import fs from 'fs'
 
-import cookieParser from 'cookie-parser';
+import cookieParser from 'cookie-parser'
 
-dotenv.config();
+import ticketRoutes from './routes/ticketRoutes.js'
+import requesterRoutes from './routes/requesterRoutes.js'
+import categoryRoutes from './routes/categoryRoutes.js'
+import equipmentRoutes from './routes/equipmentRoutes.js'
+import authRoutes from './routes/authRoutes.js'
+import userRoutes from './routes/userRoutes.js'
+import dashboardRoutes from './routes/dashboardRoutes.js'
 
-const app = express();
-const PORT = process.env.PORT || 3001;
+import {
+  authMiddleware,
+} from './middlewares/authMiddleware.js'
 
-// Logger simples para debug
-app.use((req, res, next) => {
-  console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
-  next();
-});
+dotenv.config()
 
-app.use(cors({
+const app = express()
 
-  origin: 'http://localhost:5173',
-  credentials: true
-}));
-app.use(express.json());
-app.use(cookieParser());
+const PORT =
+  process.env.PORT || 3001
 
-// Rotas de autenticação (públicas e protegidas)
-app.use('/api/auth', authRoutes);
+/**
+ * Logger simples
+ */
+app.use(
+  (
+    req,
+    res,
+    next
+  ) => {
+    console.log(
+      `[${new Date().toISOString()}] ${req.method} ${req.url}`
+    )
 
-// Rotas da aplicação
-app.use('/api/tickets', ticketRoutes);
-app.use('/api/requesters', requesterRoutes);
-app.use('/api/categories', categoryRoutes);
-app.use('/api/equipments', equipmentRoutes);
-app.use('/api/users', userRoutes);
-app.use('/api/dashboard', dashboardRoutes);
+    next()
+  }
+)
 
-app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
-});
+/**
+ * CORS
+ */
+app.use(
+  cors({
+    origin:
+      'http://localhost:5173',
+
+    credentials: true,
+  })
+)
+
+/**
+ * Middlewares globais
+ */
+app.use(express.json())
+
+app.use(cookieParser())
+
+/**
+ * =========================
+ * ROTAS PÚBLICAS
+ * =========================
+ */
+
+app.use(
+  '/api/auth',
+  authRoutes
+)
+
+/**
+ * =========================
+ * ROTAS PROTEGIDAS
+ * =========================
+ */
+
+app.use(
+  '/api/tickets',
+  authMiddleware,
+  ticketRoutes
+)
+
+app.use(
+  '/api/requesters',
+  authMiddleware,
+  requesterRoutes
+)
+
+app.use(
+  '/api/categories',
+  authMiddleware,
+  categoryRoutes
+)
+
+app.use(
+  '/api/equipments',
+  authMiddleware,
+  equipmentRoutes
+)
+
+app.use(
+  '/api/users',
+  authMiddleware,
+  userRoutes
+)
+
+app.use(
+  '/api/dashboard',
+  authMiddleware,
+  dashboardRoutes
+)
+
+/**
+ * =========================
+ * DOWNLOAD DE ARQUIVOS
+ * =========================
+ */
 
 app.get(
   '/api/archive/:file',
-  (req, res) => {
+
+  authMiddleware,
+
+  (
+    req,
+    res
+  ) => {
     try {
       const file =
         decodeURIComponent(
           req.params.file
         )
 
-      const filePath =
-        path.join(
+      /**
+       * Diretório base
+       */
+      const archiveDir =
+        path.resolve(
           process.cwd(),
-          'archive',
+          'archive'
+        )
+
+      /**
+       * Caminho final
+       */
+      const filePath =
+        path.resolve(
+          archiveDir,
           file
         )
 
-      console.log(filePath)
+      /**
+       * Proteção contra path traversal
+       */
+      if (
+        !filePath.startsWith(
+          archiveDir
+        )
+      ) {
+        return res
+          .status(403)
+          .json({
+            error:
+              'Acesso negado',
+          })
+      }
 
+      /**
+       * Arquivo não existe
+       */
       if (
         !fs.existsSync(
           filePath
@@ -78,6 +186,9 @@ app.get(
           })
       }
 
+      /**
+       * Envia arquivo
+       */
       return res.sendFile(
         filePath
       )
@@ -89,7 +200,22 @@ app.get(
         .json({
           error:
             'Erro interno',
-          })
+        })
     }
+  }
+)
+
+/**
+ * =========================
+ * START SERVER
+ * =========================
+ */
+
+app.listen(
+  PORT,
+  () => {
+    console.log(
+      `Server is running on port ${PORT}`
+    )
   }
 )
