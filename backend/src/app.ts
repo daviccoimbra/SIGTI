@@ -55,7 +55,11 @@ app.use('/api/dashboard', authMiddleware, dashboardRoutes);
 
 app.get('/api/archive/:file', authMiddleware, (req, res) => {
   try {
-    const file = decodeURIComponent(req.params.file);
+    const fileParam = req.params.file;
+    if (typeof fileParam !== 'string') {
+      return res.status(400).json({ error: 'Arquivo inválido' });
+    }
+    const file = decodeURIComponent(fileParam);
     const archiveDir = path.resolve(process.cwd(), 'archive');
     const filePath = path.resolve(archiveDir, file);
 
