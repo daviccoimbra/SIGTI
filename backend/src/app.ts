@@ -73,7 +73,7 @@ app.get('/api/archive/:file', authMiddleware, (req, res) => {
 
     return res.sendFile(filePath);
   } catch (err) {
-    console.error(err);
+    logger.error({ err }, 'Erro ao obter arquivo do arquivo');
     return res.status(500).json({ error: 'Erro interno' });
   }
 });

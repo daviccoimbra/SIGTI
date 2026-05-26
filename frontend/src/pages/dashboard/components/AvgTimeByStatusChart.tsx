@@ -1,6 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { Skeleton } from '../../../components/Skeleton';
-import { dashboardService, type QueryParams, type AvgTimeByStatusData } from '../../../services/dashboard';
+import { dashboardService, type QueryParams } from '../../../services/dashboard';
 
 interface Props {
   isLoading?: boolean;

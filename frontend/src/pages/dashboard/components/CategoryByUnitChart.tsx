@@ -1,5 +1,4 @@
 import { useQuery } from '@tanstack/react-query';
-import { Skeleton } from '../../../components/Skeleton';
 import { dashboardService, type QueryParams } from '../../../services/dashboard';
 
 interface Props {
@@ -45,7 +44,7 @@ export function CategoryByUnitChart({ isLoading = false, queryParams = {} }: Pro
         {topUnits.length === 0 && (
           <p className="text-center text-slate-400 py-6">Sem dados disponíveis</p>
         )}
-        {topUnits.map((unit, idx) => {
+        {topUnits.map((unit) => {
           const maxCatCount = Math.max(...unit.categories.map(c => c.count), 1);
           return (
             <div key={unit.unit}>

@@ -1,5 +1,4 @@
 import { useQuery } from '@tanstack/react-query';
-import { Skeleton } from '../../../components/Skeleton';
 import { dashboardService, type QueryParams } from '../../../services/dashboard';
 
 interface Props {

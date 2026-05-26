@@ -1,6 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
 import { MdAccessTime, MdError } from 'react-icons/md';
-import { Skeleton } from '../../../components/Skeleton';
 import { dashboardService, type QueryParams } from '../../../services/dashboard';
 
 interface Props {

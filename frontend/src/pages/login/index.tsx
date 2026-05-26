@@ -204,7 +204,7 @@ export default function Login() {
           {/* Footer */}
           <div className="mt-8 pt-6 border-t border-slate-100 text-center">
             <p className="text-xs text-slate-400">
-              © 2024 SIGTI - Sistema de Gestão de Chamados
+              © 2026 SIGTI - Sistema de Gestão de TI
             </p>
           </div>
         </div>
