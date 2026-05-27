@@ -38,3 +38,5 @@ backend/vitest.config.js
 backend/vitest.config.js.map
 backend/vitest.config.d.ts
 backend/vitest.config.d.ts.map
+
+deployment_plan.md
