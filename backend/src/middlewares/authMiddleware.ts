@@ -93,50 +93,41 @@ export const authMiddleware = async (
       )
 
     // Usuário não existe mais
-    if (!user) {
-      res.clearCookie('token', {
-        httpOnly: true,
-        secure: true,
-        sameSite: 'none',
-      });
-      return res.status(401).json({ error: 'Usuário não encontrado' });
-    })
-    }
+  // Usuário não encontrado
+if (!user) {
+  res.clearCookie('token', {
+    httpOnly: true,
+    secure: true,
+    sameSite: 'none',
+  });
 
-    // Usuário desativado
-    if (!user.ativo) {
-      res.clearCookie(
-        'token',
-        {
-          httpOnly: true,
-          secure:
-            process.env
-              .NODE_ENV ===
-            'production',
-          sameSite: 'lax',
-        }
-      )
+  return res.status(401).json({
+    error: 'Usuário não encontrado',
+  });
+}
 
-      return res
-        .status(403)
-        .json({
-          error:
-            'Usuário desativado',
-        })
-    }
+// Usuário desativado
+if (!user.ativo) {
+  res.clearCookie('token', {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+  });
 
-    // Injeta usuário atualizado
-    req.user = user
+  return res.status(403).json({
+    error: 'Usuário desativado',
+  });
+}
 
-    return next()
-  } catch {
-    return res
-      .status(401)
-      .json({
-        error:
-          'Token inválido ou expirado',
-      })
-  }
+// Injeta usuário atualizado
+req.user = user;
+
+return next();
+} catch {
+  return res.status(401).json({
+    error: 'Token inválido ou expirado',
+  });
+}
 }
 
 /**
@@ -151,12 +142,9 @@ export const authorize = (
     next: NextFunction
   ) => {
     if (!req.user) {
-      return res
-        .status(401)
-        .json({
-          error:
-            'Usuário não autenticado',
-        })
+      return res.status(401).json({
+        error: 'Usuário não autenticado',
+      });
     }
 
     if (
@@ -164,14 +152,12 @@ export const authorize = (
         req.user.setor
       )
     ) {
-      return res
-        .status(403)
-        .json({
-          error:
-            'Acesso negado. Seu setor não tem permissão para esta ação.',
-        })
+      return res.status(403).json({
+        error:
+          'Acesso negado. Seu setor não tem permissão para esta ação.',
+      });
     }
 
-    return next()
-  }
-}
+    return next();
+  };
+};
