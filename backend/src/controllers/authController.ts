@@ -58,8 +58,8 @@ export const login = async (req: Request, res: Response) => {
     // Envia o token em um cookie httpOnly
     res.cookie('token', token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax', // ou 'none' se usar domínios diferentes com https
+      secure: true,
+      sameSite: 'none',
       maxAge: 8 * 60 * 60 * 1000, // 8 horas em milissegundos
     });
 
@@ -84,8 +84,8 @@ export const login = async (req: Request, res: Response) => {
 export const logout = async (req: Request, res: Response) => {
   res.clearCookie('token', {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
+    secure: true,
+    sameSite: 'none',
   });
   return res.json({ message: 'Logout realizado com sucesso' });
 };

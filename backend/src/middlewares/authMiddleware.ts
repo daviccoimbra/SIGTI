@@ -94,24 +94,13 @@ export const authMiddleware = async (
 
     // Usuário não existe mais
     if (!user) {
-      res.clearCookie(
-        'token',
-        {
-          httpOnly: true,
-          secure:
-            process.env
-              .NODE_ENV ===
-            'production',
-          sameSite: 'lax',
-        }
-      )
-
-      return res
-        .status(401)
-        .json({
-          error:
-            'Usuário não existe mais',
-        })
+      res.clearCookie('token', {
+        httpOnly: true,
+        secure: true,
+        sameSite: 'none',
+      });
+      return res.status(401).json({ error: 'Usuário não encontrado' });
+    })
     }
 
     // Usuário desativado

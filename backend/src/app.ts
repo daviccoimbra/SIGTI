@@ -26,7 +26,7 @@ const app = express();
 app.use(helmet());
 app.use(pinoHttp({ logger }));
 app.use(cors({
-  origin: process.env.CORS_ORIGIN || 'http://localhost:5173',
+  origin: process.env.CORS_ORIGIN?.trim() || 'http://localhost:5173',
   credentials: true
 }));
 app.use(express.json());
