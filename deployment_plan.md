@@ -1,6 +1,6 @@
 # Plano de Deploy e Análise de Produção (Production-Ready)
 
-Este documento apresenta uma análise detalhada da prontidão para produção (Production-Readiness) da aplicação **SIGTI** e um plano de deploy passo a passo utilizando **Vercel** (para o Frontend), **Koyeb** (para o Backend) e **Supabase** (para o Banco de Dados PostgreSQL).
+Este documento apresenta uma análise detalhada da prontidão para produção (Production-Readiness) da aplicação **SIGTI** e um plano de deploy passo a passo utilizando **Vercel** (para o Frontend), **Leapcell** (para o Backend) e **Supabase** (para o Banco de Dados PostgreSQL).
 
 ---
 
@@ -12,7 +12,7 @@ Uma análise rigorosa do estado atual do código e das configurações de ambien
 O arquivo `.env` atual contém dados locais que **nunca** devem ir para produção:
 - `DATABASE_URL`: Aponta para um container Docker local (`@postgres:5432`). Em produção, deverá apontar para o pooler ou conexão direta do Supabase.
 - `JWT_SECRET`: Está definido como `"minha_chave_super_secreta"`. Em produção, deve ser um hash de alta entropia gerado aleatoriamente (ex: `openssl rand -hex 32`).
-- `PORT`: Está fixado em `3001`. Plataformas PaaS como o Koyeb injetam dinamicamente a porta na variável `PORT`. O backend foi verificado e já está tratando corretamente com `process.env.PORT || 3001` no arquivo `index.ts`.
+- `PORT`: Está fixado em `3001`. Plataformas PaaS como o Leapcell injetam dinamicamente a porta na variável `PORT`. O backend foi verificado e já está tratando corretamente com `process.env.PORT || 3001` no arquivo `index.ts`.
 - `CORS_ORIGIN`: Precisa ser restrito ao domínio oficial do frontend na Vercel (ex: `https://sigti.vercel.app`) em vez do padrão de desenvolvimento, para evitar vulnerabilidades de Cross-Origin.
 - `VITE_API_URL`: O frontend precisa saber onde enviar requisições de API em produção. 
 
@@ -22,7 +22,7 @@ O arquivo `.env` atual contém dados locais que **nunca** devem ir para produç�
 ---
 
 ### B. Correção das Falhas de Compilação TypeScript (Frontend)
-Ao rodar testes de compilação estritos no frontend com `npx tsc --noEmit`, identificamos **9 erros de compilação TypeScript** que fariam com que a Vercel e o Koyeb rejeitassem o build e falhassem no deploy:
+Ao rodar testes de compilação estritos no frontend com `npx tsc --noEmit`, identificamos **9 erros de compilação TypeScript** que fariam com que a Vercel e o Leapcell rejeitassem o build e falhassem no deploy:
 1. `src/components/TaksModal/index.tsx:554:45`: Erro de tipo onde um valor potencialmente `undefined` (`task.anexo`) estava sendo passado para a função `downloadAttachment` que exige uma `string`.
 2. Outros **8 erros** relacionados a imports declarados mas nunca usados (ex: `Skeleton` em diversos gráficos do Dashboard) e parâmetros de map sem uso (`idx` em `CategoryByUnitChart.tsx`), sob a regra estrita de TypeScript `"noUnusedLocals": true` e `"noUnusedParameters": true`.
 
@@ -44,7 +44,7 @@ Em ambiente de produção na Vercel, o Vite não roda em tempo de execução; a 
 >    ```typescript
 >    baseURL: (import.meta.env.VITE_API_URL as string | undefined) || '/api',
 >    ```
->    Isso permite que você defina a variável `VITE_API_URL` na Vercel apontando para o seu backend no Koyeb.
+>    Isso permite que você defina a variável `VITE_API_URL` na Vercel apontando para o seu backend no Leapcell.
 > 2. Criamos o arquivo [`vercel.json`](file:///home/davi/Documentos/IFAL/PINT/teste-producao/PI/frontend/vercel.json) na raiz do frontend com redirecionamento Single Page Application (SPA):
 >    ```json
 >    {
@@ -75,12 +75,12 @@ A imagem abaixo ilustra o fluxo de dados e comunicação da nossa infraestrutura
 graph TD
     Client[Navegador do Cliente]
     Vercel[Frontend - Vercel<br>sigti.vercel.app]
-    Koyeb[Backend - Koyeb Server<br>sigti-backend.koyeb.app]
+    Leapcell[Backend - Leapcell Server<br>sigti-backend.leapcell.dev]
     Supabase[Database - Supabase<br>PostgreSQL AWS]
 
     Client -->|1. Carrega HTML/JS/CSS| Vercel
-    Client -->|2. Requisições REST HTTPS /api| Koyeb
-    Koyeb -->|3. Consulta SQL Porta 5432| Supabase
+    Client -->|2. Requisições REST HTTPS /api| Leapcell
+    Leapcell -->|3. Consulta SQL Portas 6543/5432| Supabase
 ```
 
 ---
@@ -91,99 +91,116 @@ graph TD
 
 O Supabase hospedará a nossa base de dados PostgreSQL. Ele fornece alta disponibilidade e backup automáticos.
 
-1. **Criar o Projeto**:
-   - Acesse o [Supabase](https://supabase.com) e crie uma conta gratuita.
-   - Crie um novo projeto, dê um nome (ex: `sigti`) e defina uma senha forte para o banco de dados.
-   - Escolha a região mais próxima dos seus servidores do Koyeb (recomendado: **AWS South America (São Paulo) - sa-east-1** ou **AWS East US (N. Virginia)**).
-2. **Obter a Connection String**:
-   - Vá em **Project Settings** > **Database**.
-   - Procure por **Connection string** e selecione a aba **URI**.
-   - Escolha o modo **Direct** (Porta `5432`). A URL de transações (Porta `6543`) com Pgbouncer só é recomendada se estivéssemos usando Serverless Functions (Vercel Backend). Como utilizaremos o Koyeb (servidor persistente), a conexão direta é mais performática e evita problemas de Prepared Statements com o Prisma.
-   - Sua URL será parecida com:
-     `postgresql://postgres.[SEU-ID]:[SUA-SENHA]@aws-0-[REGIAO].pooler.supabase.com:5432/postgres`
-3. **Aplicar as Migrações do Banco**:
-   - Em sua máquina local, abra o terminal no diretório `PI/backend`.
-   - Execute o comando do Prisma para aplicar as migrations diretamente no Supabase:
-     ```bash
-     DATABASE_URL="postgresql://postgres.[SEU-ID]:[SUA-SENHA]@aws-0-[REGIAO].pooler.supabase.com:5432/postgres" npx prisma migrate deploy
-     ```
-   - Isto criará a estrutura física de tabelas no Supabase baseada em seu histórico de migrations.
-4. **Alimentar o Banco com Dados Iniciais (Seed)**:
-   - Execute o script de seed para criar os usuários iniciais (`admin`/`admin123` e `gestao`/`gestao123`) e categorias:
-     ```bash
-     DATABASE_URL="postgresql://postgres.[SEU-ID]:[SUA-SENHA]@aws-0-[REGIAO].pooler.supabase.com:5432/postgres" npx prisma db seed
-     ```
+> [!NOTE]
+> **Status:** Esta etapa já foi concluída! As tabelas do banco de dados foram criadas por meio do comando `npx prisma migrate deploy` e populadas com sucesso via `npx prisma db seed` através das connection strings direta (porta `5432`) e de transação (porta `6543`) configuradas no seu arquivo `.env`.
 
 ---
 
-### 🖥️ FASE 2: Backend no Koyeb
+### 🖥️ FASE 2: Guia Detalhado de Deploy do Backend no Leapcell
 
-O Koyeb é uma plataforma moderna e muito simples para rodar aplicações Node.js e Docker em containers persistentes.
+O **Leapcell** é uma plataforma PaaS de alta performance projetada para hospedar microsserviços e APIs com implantação contínua (GitOps). Como o nosso backend está aninhado em um subdiretório do repositório (`PI/backend`), siga estes passos exatos para configurá-lo no painel:
 
-1. **Criar a Conta e Conectar o GitHub**:
-   - Crie uma conta no [Koyeb](https://www.koyeb.com).
-   - Vá no painel do Koyeb e crie um novo **App**.
-   - Conecte sua conta do GitHub e selecione o repositório do projeto.
-2. **Configurar o Repositório e Build**:
-   - **Repository Branch**: `main` (ou a branch de produção correspondente).
-   - **Work Directory**: Defina o subdiretório como `PI/backend` (já que o backend está aninhado).
-   - **Build Command**: `npm run build` (irá executar `tsc` compilando a pasta `src` para `dist`).
-   - **Run Command**: `npm run start` (executará `node dist/index.js`).
-3. **Configurar Variáveis de Ambiente**:
-   No Koyeb, configure as seguintes variáveis sob a seção **Environment Variables**:
-   
-   | Nome | Valor / Tipo | Descrição |
-   |------|--------------|-----------|
-   | `DATABASE_URL` | *Secret* | A Connection String Direta do Supabase obtida na Fase 1 |
-   | `JWT_SECRET` | *Secret* | Uma string aleatória longa para assinar seus tokens JWT |
-   | `NODE_ENV` | `production` | Define o Express e o Logger em modo de alta performance |
-   | `CORS_ORIGIN` | `https://sigti.vercel.app` | A URL de produção que você terá na Vercel (Fase 3) |
-   | `LOG_LEVEL` | `info` | Nível de logs do Pino ideal para produção |
+#### Passo 1: Preparação do Repositório (Git)
+Certifique-se de realizar o commit e o push de todas as melhorias que realizamos (como a atualização de compatibilidade do `schema.prisma` com `directUrl` e a remoção de consoles remanescentes):
+```bash
+git add .
+git commit -m "chore: preparar aplicacao para producao e deploy"
+git push origin sua-branch-principal
+```
 
-4. **Porta**:
-   - Exponha a porta `3001` (ou a porta padrão detectada). O Koyeb criará um Proxy HTTPS reverso automático, gerando uma URL segura com SSL como `https://[NOME-APP].koyeb.app`. Copie essa URL.
+#### Passo 2: Acessar e Conectar no Leapcell
+1. Acesse o site do [Leapcell](https://leapcell.io) e clique em **"Log In"** (Entrar).
+2. Escolha **"Sign in with GitHub"** (Entrar com GitHub) para vincular a sua conta de forma direta.
+3. Autorize o Leapcell a visualizar seus repositórios do GitHub.
 
----
+#### Passo 3: Criar o Serviço de Backend
+1. No painel inicial do Leapcell, clique no botão azul **"New Service"** (Novo Serviço).
+2. Na lista de repositórios, localize e clique sobre o repositório do **SIGTI**.
+3. Na tela de configurações do novo serviço, insira as seguintes informações exatas:
+   * **Service Name (Nome do Serviço):** `sigti-backend` (ou o nome de sua preferência).
+   * **Language/Runtime:** Selecione **Node.js** (não utilize Docker a menos que deseje gerenciar imagens manualmente; a compilação nativa em Node.js é mais rápida).
+   * **Root Directory (Diretório Raiz):** Defina como **`PI/backend`**. Isto é de suma importância para que o Leapcell saiba que deve executar os comandos de instalação e build dentro da pasta onde se encontra o `package.json` do backend, e não na raiz geral do repositório.
+   * **Build Command (Comando de Compilação):** Insira **`npm install && npm run build`** (ou apenas `npm run build` se a plataforma já rodar a instalação automaticamente. Inserir a linha completa garante segurança em qualquer ambiente).
+     > [!NOTE]
+     > Como adicionamos `"postinstall": "prisma generate"` nas dependências do backend, o processo de instalação de dependências irá gerar o cliente Prisma automaticamente, e em seguida a pasta compilada `dist/` será criada pelo comando `build`.
+   * **Start Command (Comando de Inicialização):** Insira **`npm run start`** (ou `node dist/index.js`).
+   * **Port (Porta):** Insira **`3001`**. A API do SIGTI está programada para utilizar `process.env.PORT || 3001`, de modo que o Leapcell conseguirá realizar o mapeamento interno de portas HTTP perfeitamente.
 
-### 🎨 FASE 3: Frontend na Vercel
+#### Passo 4: Cadastrar as Variáveis de Ambiente (Config)
+Abaixo das opções de comandos, clique na aba **"Environment Variables"** (Variáveis de Ambiente) e adicione as seguintes entradas clicando em **"Add Variable"** para cada uma:
 
-A Vercel fornecerá hospedagem estática global ultra-rápida via CDN para a nossa aplicação React.
+* **`DATABASE_URL`**: Cole a Connection String de transação do Supabase (porta `6543`) contendo o parâmetro `?pgbouncer=true`.
+* **`DIRECT_URL`**: Cole a Connection String direta do Supabase (porta `5432`) sem pgbouncer.
+* **`JWT_SECRET`**: Insira uma string aleatória forte (Ex: `ERrkI4vPkWFHNJkz` ou outra senha de sua escolha) que será utilizada para assinar os tokens dos usuários.
+* **`NODE_ENV`**: Defina o valor como **`production`**.
+* **`LOG_LEVEL`**: Defina o valor como **`info`** (para manter os logs do Pino enxutos).
+* **`CORS_ORIGIN`**: Por enquanto, insira temporariamente `*` ou deixe em branco. **Atualizaremos esta variável no Passo 7** assim que a Vercel gerar a URL oficial do seu frontend.
 
-1. **Importar o Projeto**:
-   - Vá no painel da [Vercel](https://vercel.com) e conecte com seu GitHub.
-   - Clique em **Add New** > **Project** e selecione o mesmo repositório do projeto.
-2. **Ajustar as Configurações de Diretório e Build**:
-   - **Framework Preset**: `Vite` (deve ser auto-detectado).
-   - **Root Directory**: Clique em **Edit** e aponte para `PI/frontend` (a Vercel executará os comandos a partir deste diretório).
-   - **Build Command**: `npm run build` (executa `tsc -b && vite build` gerando a pasta `dist`).
-   - **Output Directory**: `dist` (padrão do Vite).
-3. **Adicionar as Variáveis de Ambiente de Build**:
-   Adicione a seguinte variável na seção **Environment Variables** da Vercel:
-   - **Nome**: `VITE_API_URL`
-   - **Valor**: `https://[NOME-APP].koyeb.app/api` (A URL HTTPS segura gerada pelo Koyeb na Fase 2 com o sufixo `/api`).
-4. **Deploy**:
-   - Clique em **Deploy**. A Vercel compilará o React com a URL do backend embutida.
-   - Ao finalizar, ela gerará a URL de produção (ex: `https://sigti.vercel.app`).
-5. **Ajuste Final (CORS)**:
-   - Copie a URL oficial gerada pela Vercel.
-   - Volte no painel do **Koyeb**, vá nas configurações do serviço de Backend e atualize a variável `CORS_ORIGIN` para que contenha exatamente essa nova URL da Vercel. O Koyeb redeployará a API automaticamente em segundos.
+#### Passo 5: Iniciar o Deploy e Validar
+1. Clique em **"Deploy"** no rodapé da página.
+2. O Leapcell iniciará a compilação. Você pode acompanhar a saída do terminal de build na aba **"Build Logs"**.
+3. Assim que o status mudar para **"Ready"** (Pronto), o Leapcell fornecerá a URL pública HTTPS da sua API, que será parecida com:
+   `https://sigti-backend-[seu-usuario].leapcell.dev`
+4. **Validação da API:** Para verificar se o servidor está no ar e respondendo corretamente ao banco de dados, abra uma nova aba no seu navegador e acesse o endpoint de saúde que configuramos:
+   `https://sigti-backend-[seu-usuario].leapcell.dev/api/health`
+   Se a página retornar um JSON como `{ "status": "ok", "timestamp": "..." }`, seu backend está no ar com 100% de sucesso! Copie a URL completa da API.
 
 ---
 
-## 🔒 4. Melhores Práticas de Segurança Recomendadas (Pós-Deploy)
+### 🎨 FASE 3: Guia Detalhado de Deploy do Frontend na Vercel
 
-Para garantir a integridade dos dados e a segurança da aplicação no ambiente final:
+A **Vercel** fará a distribuição estática global ultra-rápida (Edge CDN) do seu frontend React.
 
-- [ ] **Configuração do CORS**: Garanta que `CORS_ORIGIN` nunca seja configurado como `*`. Isso previne que outros sites façam requisições em nome do usuário.
-- [ ] **Segurança de Cookies**: No controller de login, certifique-se de que os cookies contendo tokens de sessão usem as diretivas `httpOnly: true`, `secure: true` (exige HTTPS) e `sameSite: 'strict'` em produção.
-- [ ] **SSL Forçado**: Koyeb e Vercel já forçam HTTPS por padrão. Nunca permita tráfego HTTP puro.
-- [ ] **Backup do Supabase**: A Premium do Supabase mantém backups diários por 7 dias. Para empresas ou órgãos oficiais (IFAL), configure uma rotina de exportação automática (ex: pg_dump via GitHub Actions mensal) ou assine o plano pago para ter maior retenção de dados históricos.
-- [ ] **Limitação de Taxa (Rate Limit)**: O middleware `express-rate-limit` já está configurado para 100 requisições a cada 15 minutos. Caso você use redirecionamento ou API gateway no futuro, garanta que o rate limiter consiga ler o IP real do cliente configurando `app.set('trust proxy', 1)` no express.
+#### Passo 1: Acessar a Vercel
+1. Vá em [vercel.com](https://vercel.com) e conecte usando sua conta do GitHub.
+2. Clique no botão preto **"Add New..."** e selecione a opção **"Project"** (Projeto).
+
+#### Passo 2: Importar o Projeto
+1. Na lista de repositórios do GitHub exibida, clique no botão **"Import"** (Importar) ao lado do seu repositório **SIGTI**.
+
+#### Passo 3: Configurar os Parâmetros do Frontend
+Na tela de configuração do projeto Vercel, preencha exatamente os campos a seguir:
+1. **Project Name:** `sigti` (ou o nome que preferir).
+2. **Framework Preset:** Selecione **Vite** (geralmente é auto-detectado).
+3. **Root Directory (Diretório Raiz):** Clique no botão **"Edit"** e selecione a pasta **`PI/frontend`**. Isso é crucial para que a Vercel execute o comando de build dentro da pasta correta contendo a aplicação React.
+4. **Build and Development Settings:** Deixe os valores padrões pré-configurados pela Vercel (`npm run build` e pasta de saída `dist`).
+
+#### Passo 4: Adicionar a Variável de Ambiente
+Abra a seção **"Environment Variables"** e insira a variável que conectará seu frontend com a API hospedada no Leapcell:
+* **Key (Chave):** **`VITE_API_URL`**
+* **Value (Valor):** Cole a URL de produção gerada pelo Leapcell na Fase 2 **acrescida do sufixo `/api`**.
+  * Exemplo: `https://sigti-backend-[seu-usuario].leapcell.dev/api`
+  > [!IMPORTANT]
+  > Certifique-se de que a URL não tenha uma barra (`/`) no final. O formato correto é terminar com `/api`.
+
+#### Passo 5: Implantar (Deploy)
+1. Clique no botão verde **"Deploy"**.
+2. A Vercel executará o comando `npm run build` do React. Graças às correções TypeScript que efetuamos em seus componentes e arquivos gráficos, o build finalizará sem nenhum erro!
+3. Após alguns segundos, a Vercel exibirá uma tela de comemoração e fornecerá a sua URL pública final de produção (ex: `https://sigti.vercel.app` ou `https://sigti-two.vercel.app`). Copie esta URL do frontend.
 
 ---
 
-## 🏁 5. Conclusão e Próximos Passos
+### 🔗 FASE 4: Amarração Final de Segurança (CORS)
 
-A aplicação **SIGTI** está em excelente forma técnica. Com TypeScript estrito compilando com 100% de sucesso, logs limpos, sem rastros de `console.log` em produção, tratamento centralizado de erros e o fluxo de SPA configurado na Vercel via `vercel.json`, o deploy decorrerá de forma extremamente suave e profissional.
+Como uma das melhores práticas de segurança que especificamos na nossa análise de produção, o seu backend não deve aceitar requisições de origens desconhecidas. Agora que seu frontend tem uma URL definitiva, vamos fechar o cadeado de segurança:
 
-Para iniciar, siga a **Fase 1** configurando seu banco de dados no Supabase e use a Connection String obtida para rodar `npx prisma migrate deploy` localmente.
+1. Volte ao painel do **Leapcell**.
+2. Abra as configurações do serviço `sigti-backend` e vá na aba **"Environment Variables"** (ou "Config").
+3. Localize a variável **`CORS_ORIGIN`**.
+4. Substitua o valor atual pela URL oficial que a Vercel gerou para você (Ex: `https://sigti.vercel.app`).
+   > [!WARNING]
+   > Não adicione barras ou sufixos no final. Exemplo correto: `https://sigti.vercel.app` (sem `/` no final).
+5. Salve as alterações. O Leapcell fará um reinício suave em segundos, atualizando as políticas de CORS para aceitar conexões vindas exclusivamente do seu frontend da Vercel.
+
+---
+
+## 🏁 4. Como testar tudo depois de pronto?
+
+Para testar o fluxo de ponta a ponta:
+1. Abre a URL pública gerada pela **Vercel** no seu navegador.
+2. Você será direcionado para a tela de login (`/login`).
+3. Insira as credenciais padrão criadas pelo nosso seed do Supabase:
+   * **Usuário:** `admin`
+   * **Senha:** `admin123`
+4. Se o login for bem-sucedido, a aplicação React carregará o painel Kanban em `/chamados`, fazendo a chamada segura da API do Leapcell, que por sua vez coletará os dados salvos em nuvem no Supabase.
+5. Acesse a aba **Dashboard** para validar se os gráficos estão lendo os tickets históricos e ativos perfeitamente e sem erros no console!
